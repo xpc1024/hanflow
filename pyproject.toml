@@ -13,6 +13,7 @@ dependencies = [
     "aiosqlite>=0.20",
     "langgraph-checkpoint-sqlite>=2.0",
     "jsonschema>=4.20",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +24,7 @@ dev = [
     "ruff>=0.5",
     "types-PyYAML>=6.0",
     "types-jsonschema>=4.0",
+    "pytest-httpx>=0.30",
 ]
 langsmith = [
     "langsmith>=0.1",
