@@ -20,6 +20,11 @@ dev = [
     "ruff>=0.5",
     "types-PyYAML>=6.0",
 ]
+langsmith = [
+    "langsmith>=0.1",
+]
+otel = ["opentelemetry-api>=1.24", "opentelemetry-sdk>=1.24"]
+all = ["hanflow[langsmith,otel]"]
 
 [project.scripts]
 hanflow = "hanflow.cli.main:main"
