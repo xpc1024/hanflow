@@ -40,6 +40,14 @@ class ResumeCommand(BaseModel):
 class ResumeManager:
     def __init__(self, kv: SqliteKVBackend) -> None:
         self.kv = kv
+        # Optional runner registered by the orchestration layer (Phase 8) to
+        # drive graph-level resume. When unset, resume() raises.
+        self._runner: Any = None
+
+    def set_runner(self, runner: Any) -> None:
+        """Register a callable ``runner(run_id, command) -> RunResult`` used by
+        ``resume()``. The orchestration layer (Phase 8) provides this."""
+        self._runner = runner
 
     async def record_paused(
         self, run_id: str, payload: HITLPayload, user_id: str | None = None
@@ -81,9 +89,12 @@ class ResumeManager:
     async def resume(self, run_id: str, command: ResumeCommand) -> Any:
         """Drive graph-level resume.
 
-        Implemented in Phase 8 (orchestration). Raises NotImplementedError
-        until the compiler integration lands.
+        Delegates to the runner registered via ``set_runner`` (Phase 8
+        orchestration). Raises NotImplementedError if no runner is set.
         """
-        raise NotImplementedError(
-            "graph resume is wired in Phase 8 (orchestration); use it from the SDK then."
-        )
+        if self._runner is None:
+            raise NotImplementedError(
+                "graph resume requires a runner; register one via set_runner "
+                "(Phase 8 orchestration wires this)."
+            )
+        return await self._runner(run_id, command)
