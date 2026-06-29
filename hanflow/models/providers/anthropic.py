@@ -32,7 +32,7 @@ class AnthropicProvider:
         return (usage.input_tokens / 1000) * in_p + (usage.output_tokens / 1000) * out_p
 
     async def complete(self, model: str, messages: list[Any], **kwargs: Any) -> ModelResponse:
-        from anthropic import AsyncAnthropic  # type: ignore[import-not-found]
+        from anthropic import AsyncAnthropic
 
         client = AsyncAnthropic(api_key=self.api_key)
         t0 = time.monotonic()

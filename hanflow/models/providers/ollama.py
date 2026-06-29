@@ -25,7 +25,7 @@ class OllamaProvider:
         return 0.0  # local
 
     async def complete(self, model: str, messages: list[Any], **kwargs: Any) -> ModelResponse:
-        import ollama  # type: ignore[import-not-found]
+        import ollama
 
         client = ollama.AsyncClient(host=self.base_url)
         t0 = time.monotonic()

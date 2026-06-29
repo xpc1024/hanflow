@@ -72,9 +72,7 @@ class _RemoteConnection:
         return []
 
     async def call_tool(self, name: str, args: dict[str, Any]) -> Any:
-        raise NotImplementedError(
-            "remote tool call requires a live MCP server (integration test)"
-        )
+        raise NotImplementedError("remote tool call requires a live MCP server (integration test)")
 
     async def close(self) -> None:
         self._client = None

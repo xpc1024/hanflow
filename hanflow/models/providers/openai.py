@@ -32,7 +32,7 @@ class OpenAIProvider:
         return (usage.input_tokens / 1000) * in_p + (usage.output_tokens / 1000) * out_p
 
     async def complete(self, model: str, messages: list[Any], **kwargs: Any) -> ModelResponse:
-        from openai import AsyncOpenAI  # type: ignore[import-not-found]
+        from openai import AsyncOpenAI
 
         client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
         t0 = time.monotonic()
