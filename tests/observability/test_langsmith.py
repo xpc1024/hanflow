@@ -29,9 +29,8 @@ async def test_langsmith_export_creates_and_updates_runs():
 async def test_langsmith_nested_runs_parent_link():
     client = _fake_client()
     exp = LangSmithTraceExporter(client=client, project="p")
-    async with exp.span("parent"):
-        async with exp.span("child"):
-            pass
+    async with exp.span("parent"), exp.span("child"):
+        pass
     await exp.flush()
 
     create_calls = client.create_run.call_args_list

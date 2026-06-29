@@ -23,10 +23,9 @@ async def test_span_lifecycle_sets_end_time():
 @pytest.mark.asyncio
 async def test_nested_span_inherits_parent():
     exp = NullTraceExporter()
-    async with exp.span("parent") as parent:
-        async with exp.span("child") as child:
-            assert child.parent_span_id == parent.span_id
-            assert child.trace_id == parent.trace_id
+    async with exp.span("parent") as parent, exp.span("child") as child:
+        assert child.parent_span_id == parent.span_id
+        assert child.trace_id == parent.trace_id
 
 
 @pytest.mark.asyncio
@@ -74,9 +73,8 @@ async def test_null_exporter_buffers_and_flush_noops():
 @pytest.mark.asyncio
 async def test_capture_exporter_collects_spans_for_test():
     exp = _BufferedTraceExporter()
-    async with exp.span("a"):
-        async with exp.span("b"):
-            pass
+    async with exp.span("a"), exp.span("b"):
+        pass
     await exp.flush()
     assert len(exp.exported) == 2
     names = {s.name for s in exp.exported}
@@ -90,9 +88,8 @@ async def test_capture_exporter_collects_spans_for_test():
 @pytest.mark.asyncio
 async def test_trace_id_consistent_across_tree():
     exp = NullTraceExporter()
-    async with exp.span("root") as root:
-        async with exp.span("leaf") as leaf:
-            assert leaf.trace_id == root.trace_id
+    async with exp.span("root") as root, exp.span("leaf") as leaf:
+        assert leaf.trace_id == root.trace_id
 
 
 def test_span_model_defaults():
