@@ -12,6 +12,7 @@ dependencies = [
     "pyyaml>=6.0",
     "aiosqlite>=0.20",
     "langgraph-checkpoint-sqlite>=2.0",
+    "jsonschema>=4.20",
 ]
 
 [project.optional-dependencies]
@@ -21,6 +22,7 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.5",
     "types-PyYAML>=6.0",
+    "types-jsonschema>=4.0",
 ]
 langsmith = [
     "langsmith>=0.1",
