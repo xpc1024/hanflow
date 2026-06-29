@@ -1,0 +1,10 @@
+name: 深度研报
+nodes:
+  - id: coordinator
+    type: Coordinator
+    config:
+      planning_model: strong
+      sub_agents: [researcher, analyst, writer]
+      plan_hitl: true
+      replan: true
+      max_iterations: 5

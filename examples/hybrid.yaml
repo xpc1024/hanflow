@@ -1,0 +1,20 @@
+name: 智能研报管线
+nodes:
+  - id: intake
+    type: LLM
+    config:
+      template: 解析选题
+  - id: research
+    type: Coordinator
+    depends_on: [intake]
+    config:
+      sub_agents: [researcher, coder]
+      plan_hitl: true
+  - id: factcheck_gate
+    type: HITL
+    depends_on: [research]
+    config:
+      actions: [approve, edit, reject]
+  - id: report
+    type: Execution
+    depends_on: [factcheck_gate]

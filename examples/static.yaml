@@ -1,0 +1,15 @@
+name: 内容审核发布
+nodes:
+  - id: draft
+    type: LLM
+    config:
+      template: 写初稿
+  - id: review
+    type: HITL
+    depends_on: [draft]
+    config:
+      actions: [approve, edit, reject, reroute]
+  - id: publish
+    type: Tool
+    depends_on: [review]
+    condition: "review.action == approve"
