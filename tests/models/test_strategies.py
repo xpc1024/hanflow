@@ -4,7 +4,6 @@ from hanflow.models.strategies.fallback import FallbackStrategy
 from hanflow.models.strategies.role import RoleStrategy
 from hanflow.models.strategies.static import StaticStrategy
 from hanflow.models.strategies.task import TaskStrategy
-
 from tests.models.conftest import FakeProvider
 
 

@@ -1,5 +1,4 @@
 from hanflow.models.providers.base import ModelProvider
-
 from tests.models.conftest import FakeProvider
 
 

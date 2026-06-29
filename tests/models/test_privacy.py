@@ -16,7 +16,9 @@ def _providers():
 
 def test_confidential_routes_to_local_only():
     strat = PrivacyStrategy(
-        PrivacyConfig(local_providers=["local"], enforce="hard", pii_detection=PIIConfig(regex=True))
+        PrivacyConfig(
+            local_providers=["local"], enforce="hard", pii_detection=PIIConfig(regex=True)
+        )
     )
     req = RoutingRequest(messages=[], sensitivity="confidential")
     cands = strat.candidates(req, _providers())
@@ -52,7 +54,9 @@ def test_hard_violation_when_no_local_provider():
     from tests.models.conftest import FakeProvider
 
     strat = PrivacyStrategy(
-        PrivacyConfig(local_providers=["local"], enforce="hard", pii_detection=PIIConfig(regex=True))
+        PrivacyConfig(
+            local_providers=["local"], enforce="hard", pii_detection=PIIConfig(regex=True)
+        )
     )
     provs = {"cloud": FakeProvider("cloud", is_local=False)}  # no local
     req = RoutingRequest(messages=[], sensitivity="restricted")

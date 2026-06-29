@@ -12,7 +12,9 @@ from hanflow.models.strategies.base import ModelCandidate, RoutingRequest
 
 @pytest.mark.asyncio
 async def test_budget_exceeded_raises():
-    g = GovernanceLayer(GovernanceConfig(budget=BudgetConfig(max_cost_per_run_usd=1.0, warn_at=0.8)))
+    g = GovernanceLayer(
+        GovernanceConfig(budget=BudgetConfig(max_cost_per_run_usd=1.0, warn_at=0.8))
+    )
     cand = ModelCandidate(provider="cloud", model="strong", score=1.0, reason="static")
     with pytest.raises(BudgetExceededError):
         await g.check_budget(cand, run_budget_remaining=0.4, estimated_cost=0.5)
@@ -20,7 +22,9 @@ async def test_budget_exceeded_raises():
 
 @pytest.mark.asyncio
 async def test_budget_warn_but_ok():
-    g = GovernanceLayer(GovernanceConfig(budget=BudgetConfig(max_cost_per_run_usd=1.0, warn_at=0.8)))
+    g = GovernanceLayer(
+        GovernanceConfig(budget=BudgetConfig(max_cost_per_run_usd=1.0, warn_at=0.8))
+    )
     cand = ModelCandidate(provider="cloud", model="strong", score=1.0, reason="static")
     await g.check_budget(cand, run_budget_remaining=0.4, estimated_cost=0.05)
 

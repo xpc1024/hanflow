@@ -116,9 +116,7 @@ class PrivacyStrategy(RoutingStrategy):
             cards=_CARD.findall(text),
         )
 
-    async def redact(
-        self, messages: list[Any], pii: PIIResult
-    ) -> tuple[list[Any], RedactionMap]:
+    async def redact(self, messages: list[Any], pii: PIIResult) -> tuple[list[Any], RedactionMap]:
         mapping: dict[str, str] = {}
         redacted: list[Any] = []
         for m in messages:
