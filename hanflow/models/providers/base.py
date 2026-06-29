@@ -1,4 +1,10 @@
-"""ModelProvider Protocol + shared result models (full version in Task 4)."""
+"""ModelProvider Protocol — per-vendor LLM adapter (§4.2).
+
+Implementations wrap each vendor's native SDK (NOT LangChain LLM abstractions).
+``is_local`` distinguishes local/self-hosted providers (ollama/vllm) — used by
+the privacy strategy to route sensitive data. ``estimate_cost`` lets the
+governance layer guard budgets.
+"""
 
 from __future__ import annotations
 
