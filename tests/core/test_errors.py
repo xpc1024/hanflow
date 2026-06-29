@@ -2,6 +2,7 @@ import pytest
 
 from hanflow.core.errors import (
     BudgetExceededError,
+    CheckpointCorruptError,
     CompileError,
     DSLValidationError,
     HanflowError,
@@ -14,7 +15,6 @@ from hanflow.core.errors import (
     NodeExecutionError,
     PrivacyViolationError,
     RateLimitError,
-    CheckpointCorruptError,
     ToolTimeoutError,
 )
 

@@ -2,7 +2,6 @@ import pytest
 
 from hanflow.core.expr import ExprError, evaluate, interpolate
 
-
 # --- interpolation ---------------------------------------------------------
 
 

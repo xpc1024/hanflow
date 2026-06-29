@@ -2,7 +2,7 @@ from datetime import datetime
 
 from langgraph.graph.message import add_messages
 
-from hanflow.core.state import NodeState, NexusState, RunMeta
+from hanflow.core.state import NexusState, NodeState, RunMeta
 
 
 def test_runmeta_defaults():
@@ -61,4 +61,3 @@ def test_nexusstate_round_trip():
     assert s2.meta.run_id == "r1"
     assert s2.variables == {"x": 1}
     assert s2.pending_hitl is None
-
