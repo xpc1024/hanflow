@@ -1,4 +1,5 @@
 """Fixtures: temp sqlite db and local_fs root for persistence tests."""
+
 from __future__ import annotations
 
 from pathlib import Path

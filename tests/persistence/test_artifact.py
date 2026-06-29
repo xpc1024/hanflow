@@ -11,9 +11,7 @@ def store(tmp_fs_root):
 
 
 def _art(i: str = "a1", content="hello") -> Artifact:
-    return Artifact(
-        id=i, kind="report", content=content, mime_type="text/plain", source_node="n"
-    )
+    return Artifact(id=i, kind="report", content=content, mime_type="text/plain", source_node="n")
 
 
 @pytest.mark.asyncio

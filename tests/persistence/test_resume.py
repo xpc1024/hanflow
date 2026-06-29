@@ -73,7 +73,9 @@ def test_resume_command_kinds():
 
 
 def test_resume_command_invalid_kind_rejected():
-    with pytest.raises(Exception):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
         ResumeCommand(kind="bogus", payload={})  # type: ignore[arg-type]
 
 

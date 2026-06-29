@@ -68,9 +68,7 @@ class SessionStore:
         s = await self.get_session(session_id)
         if s is None:
             raise KeyError(f"session not found: {session_id}")
-        updated = s.model_copy(
-            update={**fields, "updated_at": datetime.now(UTC).isoformat()}
-        )
+        updated = s.model_copy(update={**fields, "updated_at": datetime.now(UTC).isoformat()})
         await self.kv.put(_SESSION_SCOPE, session_id, updated.model_dump_json())
 
     async def close_session(self, session_id: str) -> None:
