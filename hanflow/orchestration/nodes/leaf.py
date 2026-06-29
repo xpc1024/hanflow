@@ -7,7 +7,7 @@ so the rest of Phase 8 stays independently testable.
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 from hanflow.core.dsl import NodeConfig, WorkflowNode
 from hanflow.core.errors import HanflowError
@@ -75,10 +75,7 @@ class ResearchExecutor:
         cfg = _cfg(node)
         query = interpolate(cfg["query"], inputs)
         try:
-            from hanflow.atoms.research import (  # type: ignore[import-untyped]
-                ResearchAtom,
-                ResearchOptions,
-            )
+            from hanflow.atoms.research import ResearchAtom, ResearchOptions
         except ImportError as exc:  # pragma: no cover - Phase 9 wires this
             raise HanflowError("Research atom not yet wired (Phase 9)") from exc
         atom = ResearchAtom()
@@ -93,7 +90,7 @@ class ResearchExecutor:
                 citation=cfg.get("citation", True),
             ),
         )
-        return cast(AtomResult, result)
+        return result
 
 
 class ExecutionExecutor:
@@ -108,10 +105,7 @@ class ExecutionExecutor:
         cfg = _cfg(node)
         task = interpolate(cfg["task"], inputs)
         try:
-            from hanflow.atoms.execution import (  # type: ignore[import-untyped]
-                ExecutionAtom,
-                ExecutionOptions,
-            )
+            from hanflow.atoms.execution import ExecutionAtom, ExecutionOptions
         except ImportError as exc:  # pragma: no cover - Phase 9 wires this
             raise HanflowError("Execution atom not yet wired (Phase 9)") from exc
         atom = ExecutionAtom()
@@ -127,4 +121,4 @@ class ExecutionExecutor:
                 tools_whitelist=cfg.get("tools_whitelist"),
             ),
         )
-        return cast(AtomResult, result)
+        return result

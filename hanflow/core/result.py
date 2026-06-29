@@ -107,6 +107,16 @@ class NextAction(BaseModel):
     loop_continue: bool = False
 
 
+class ResearchNote(BaseModel):
+    """A single research finding with bound source_ids for provenance (§8.2)."""
+
+    id: str
+    claim: str
+    evidence: str
+    source_ids: list[str]
+    confidence: float
+
+
 class AtomResult(BaseModel):
     """Universal return of atoms and node executors."""
 
