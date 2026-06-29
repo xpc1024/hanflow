@@ -19,7 +19,7 @@ and the full isolation *contract* + spawn_agent().
 from __future__ import annotations
 
 import uuid
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +29,7 @@ from hanflow.core.errors import HanflowError
 from hanflow.observability.trace import TraceExporter
 
 
-class SandboxMode(str, Enum):
+class SandboxMode(StrEnum):
     LOCAL = "local"
     DOCKER = "docker"
     K8S = "k8s"
