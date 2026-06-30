@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BuildMode } from "@/components/canvas/BuildMode";
 import { MonitorView } from "@/components/monitor/MonitorView";
+import { HitlPanel } from "@/components/hitl/HitlPanel";
 import type { WorkflowDSL } from "@/lib/dsl/types";
 
 const sampleDsl: WorkflowDSL = {
@@ -20,14 +21,14 @@ const sampleDsl: WorkflowDSL = {
 };
 
 export default function Home() {
-  const [tab, setTab] = useState<"build" | "monitor">("build");
+  const [tab, setTab] = useState<"build" | "monitor" | "hitl">("build");
 
   return (
     <main style={{ padding: 16, height: "100vh", display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
         <h1 style={{ margin: 0, fontSize: 20 }}>Hanflow Studio</h1>
         <div style={{ display: "flex", gap: 4 }}>
-          {(["build", "monitor"] as const).map((t) => (
+          {(["build", "monitor", "hitl"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -49,7 +50,7 @@ export default function Home() {
         </div>
       </div>
       <div style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
-        {tab === "build" ? <BuildMode initialDsl={sampleDsl} /> : <MonitorView />}
+        {tab === "build" ? <BuildMode initialDsl={sampleDsl} /> : tab === "monitor" ? <MonitorView /> : <HitlPanel />}
       </div>
     </main>
   );
