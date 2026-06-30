@@ -24,4 +24,8 @@ def build_app(hanflow: Any = None) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(root)
+
+    from hanflow.api.routes import schema as schema_routes
+
+    app.include_router(schema_routes.router)
     return app
