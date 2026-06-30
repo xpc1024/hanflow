@@ -80,41 +80,20 @@ class HITLExecutor:
             raise HanflowError("HITL.actions must be non-empty if provided")
 
     async def run(self, ctx: Any, node: WorkflowNode, inputs: dict[str, Any]) -> AtomResult:
-        """Emit a HITL payload then pause (LangGraph interrupt wired by the
-        Compiler wrapper; here we stage the payload + return a pause action).
+        """Emit a HITL payload then ``interrupt()`` to pause the graph.
 
-        On resume, the wrapper injects the HITLRecord into inputs['hitl']; we
-        translate record.action → NextAction.
+        LangGraph's ``interrupt(payload)`` suspends the graph (checkpoint
+        persists). On resume, ``ainvoke(Command(resume=x), ...)`` injects ``x``
+        as the return value here. We normalise the resume value to
+        ``{"hitl": HITLRecord_dict}`` and translate ``record.action`` into the
+        NextAction (approve/edit continue; reject → reject_branch or abort;
+        reroute → branch target).
         """
         from datetime import UTC, datetime
 
-        from hanflow.core.result import HITLPayload, HITLRecord
+        from langgraph.types import interrupt
 
-        record: HITLRecord | None = inputs.get("hitl")
-        if record is not None:
-            if record.action == "approve":
-                return AtomResult(
-                    output={"action": "approve"}, next_action=NextAction(type="continue")
-                )
-            if record.action == "edit":
-                return AtomResult(
-                    output={"action": "edit", "value": record.edited_value},
-                    next_action=NextAction(type="continue"),
-                )
-            if record.action == "reject":
-                cfg = node.config.__pydantic_extra__ or {}
-                reject_branch = cfg.get("reject_branch")
-                if reject_branch:
-                    return AtomResult(
-                        output={"action": "reject"},
-                        next_action=NextAction(type="branch", branch_label=reject_branch),
-                    )
-                return AtomResult(output={"action": "reject"}, next_action=NextAction(type="abort"))
-            if record.action == "reroute":
-                return AtomResult(
-                    output={"action": "reroute"},
-                    next_action=NextAction(type="branch", branch_label=record.reroute_target or ""),
-                )
+        from hanflow.core.result import HITLPayload
 
         cfg = node.config.__pydantic_extra__ or {}
         payload = HITLPayload(
@@ -128,4 +107,31 @@ class HITLExecutor:
             timeout_seconds=cfg.get("timeout_seconds"),
         )
         ctx.emit_hitl(payload)
-        return AtomResult(output={"action": "paused"}, next_action=NextAction(type="pause_hitl"))
+        # interrupt() suspends; resume value is {"hitl": {...HITLRecord...}}.
+        resume_value = interrupt(payload.model_dump(mode="json"))
+        record_raw = (resume_value or {}).get("hitl", {}) if isinstance(resume_value, dict) else {}
+        action = record_raw.get("action", "approve")
+
+        if action == "approve":
+            return AtomResult(output={"action": "approve"}, next_action=NextAction(type="continue"))
+        if action == "edit":
+            return AtomResult(
+                output={"action": "edit", "value": record_raw.get("edited_value")},
+                next_action=NextAction(type="continue"),
+            )
+        if action == "reject":
+            reject_branch = cfg.get("reject_branch")
+            if reject_branch:
+                return AtomResult(
+                    output={"action": "reject"},
+                    next_action=NextAction(type="branch", branch_label=reject_branch),
+                )
+            return AtomResult(output={"action": "reject"}, next_action=NextAction(type="abort"))
+        if action == "reroute":
+            return AtomResult(
+                output={"action": "reroute"},
+                next_action=NextAction(
+                    type="branch", branch_label=record_raw.get("reroute_target", "")
+                ),
+            )
+        return AtomResult(output={"action": action}, next_action=NextAction(type="continue"))
