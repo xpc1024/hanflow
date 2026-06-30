@@ -1,4 +1,4 @@
-import { WorkflowCanvas } from "@/components/canvas/WorkflowCanvas";
+import { BuildMode } from "@/components/canvas/BuildMode";
 import type { WorkflowDSL } from "@/lib/dsl/types";
 
 const sampleDsl: WorkflowDSL = {
@@ -17,9 +17,11 @@ const sampleDsl: WorkflowDSL = {
 
 export default function Home() {
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Hanflow Studio</h1>
-      <WorkflowCanvas dsl={sampleDsl} />
+    <main style={{ padding: 16, height: "100vh", display: "flex", flexDirection: "column" }}>
+      <h1 style={{ margin: "0 0 12px", fontSize: 20 }}>Hanflow Studio — Build</h1>
+      <div style={{ flex: 1 }}>
+        <BuildMode initialDsl={sampleDsl} />
+      </div>
     </main>
   );
 }
