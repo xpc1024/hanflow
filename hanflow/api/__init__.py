@@ -1,25 +1,27 @@
-"""Minimal FastAPI app (health + DSL schema endpoint) — v1 foundation (§11.7)."""
+"""Hanflow FastAPI app — v1 backend (§11.7).
+
+``build_app(hanflow)`` mounts resource routers (schema/workflows/runs/hitl/
+observe) on top of the v0 health endpoint. The ``hanflow`` SDK instance is
+stored on ``app.state`` for dependency injection (``deps.get_hanflow``).
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
+from fastapi import APIRouter, FastAPI
 
-def build_app(hanflow: Any = None) -> Any:
-    """Build a FastAPI app. ``hanflow`` is the SDK instance (optional, for v1)."""
-    from fastapi import FastAPI
 
-    from hanflow.core.dsl import WorkflowDSL
-
+def build_app(hanflow: Any = None) -> FastAPI:
+    """Build the FastAPI app. ``hanflow`` is the SDK instance (stored for DI)."""
     app = FastAPI(title="Hanflow", version="0.1.0")
+    app.state.hanflow = hanflow
 
-    @app.get("/api/health")
+    root = APIRouter()
+
+    @root.get("/api/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.get("/api/schema/dsl")
-    async def dsl_schema() -> dict[str, Any]:
-        # Single source of truth for the frontend TS types (v1 Web Studio).
-        return WorkflowDSL.model_json_schema()
-
+    app.include_router(root)
     return app

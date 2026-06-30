@@ -402,6 +402,7 @@ dev = [
     { name = "ruff" },
     { name = "types-jsonschema" },
     { name = "types-pyyaml" },
+    { name = "websockets" },
 ]
 glm = [
     { name = "zhipuai" },
@@ -460,6 +461,7 @@ requires-dist = [
     { name = "typer", specifier = ">=0.12" },
     { name = "types-jsonschema", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
+    { name = "websockets", marker = "extra == 'dev'", specifier = ">=12.0" },
     { name = "zhipuai", marker = "extra == 'glm'", specifier = ">=2.0" },
 ]
 provides-extras = ["dev", "langsmith", "otel", "postgres", "redis", "s3", "openai", "anthropic", "glm", "deepseek", "ollama", "vllm", "all"]
