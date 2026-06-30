@@ -10,6 +10,14 @@ services:
       - ../../workflows:/app/workflows
       - ../../workspace:/app/workspace
     depends_on: [postgres, redis, minio]
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+    ports: ["3000:3000"]
+    environment:
+      NEXT_PUBLIC_API_BASE: "http://localhost:8000"
+    depends_on: [engine]
   postgres:
     image: postgres:16
     environment:
