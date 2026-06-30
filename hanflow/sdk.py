@@ -60,16 +60,26 @@ class RunHandle:
         self.run_id = run_id
         self.status = status
         self._result: RunResult | None = None
-        self._events: list[RunEvent] = []
-
-    async def wait(self, timeout: float | None = None) -> RunResult:
-        if self._result is None:
-            self._result = RunResult(run_id=self.run_id, status=self.status)
-        return self._result
+        self._queue: asyncio.Queue[RunEvent | None] = asyncio.Queue()
+        # Resume hook (set by Hanflow.run): resume(Command) drives HITL recovery.
+        self._resume: Any = None
+        self._pending_payload: Any = None
 
     async def stream(self) -> AsyncIterator[RunEvent]:
-        for e in self._events:
-            yield e
+        """Yield RunEvents in real time as the graph runs; ends when None sentinel."""
+        while True:
+            ev = await self._queue.get()
+            if ev is None:
+                break
+            yield ev
+
+    async def wait(self, timeout: float | None = None) -> RunResult:
+        # Drain any remaining events if the result isn't ready yet.
+        if self._result is None:
+            async for _ in self.stream():
+                pass
+        assert self._result is not None
+        return self._result
 
     @property
     def is_paused(self) -> bool:
@@ -152,22 +162,64 @@ class Hanflow:
         )
         try:
             compiled = Compiler(NodeExecutorRegistry.default()).compile(dsl, ctx=ctx)
-            result = await compiled.graph.ainvoke(state)
-            outputs = result.get("outputs", {}) if isinstance(result, dict) else {}
-            artifacts = result.get("artifacts", []) if isinstance(result, dict) else []
-            node_states = result.get("node_states", {}) if isinstance(result, dict) else {}
-            failed = any(
-                (ns.status if hasattr(ns, "status") else ns.get("status")) == "failed"
-                for ns in node_states.values()
-            )
-            handle.status = "failed" if failed else "succeeded"
-            handle._result = RunResult(
-                run_id=run_id,
-                status=handle.status,
-                outputs=outputs,
-                artifacts=artifacts,
-            )
+            config: dict[str, Any] = {"configurable": {"thread_id": run_id}}
+
+            # Wire a resume hook so HITL approve/edit/reject/reroute can drive
+            # the graph forward via Command(resume=...).
+            async def _resume(command: Any) -> Any:
+                return await compiled.graph.ainvoke(command, config=config)
+
+            handle._resume = _resume
+
+            final_outputs: dict[str, Any] = {}
+            final_artifacts: list[Any] = []
+            seen_node_states: dict[str, Any] = {}
+            paused = False
+            async for chunk in compiled.graph.astream(state, config=config, stream_mode="updates"):
+                if not isinstance(chunk, dict):
+                    continue
+                for node_id, update in chunk.items():
+                    if node_id == "__interrupt__":
+                        await handle._queue.put(
+                            RunEvent(
+                                kind="hitl_paused", data=update if isinstance(update, dict) else {}
+                            )
+                        )
+                        paused = True
+                        continue
+                    update_dict = update if isinstance(update, dict) else {}
+                    node_states = update_dict.get("node_states", {})
+                    ns = node_states.get(node_id)
+                    if ns is not None:
+                        seen_node_states[node_id] = ns
+                        st = ns.status if hasattr(ns, "status") else ns.get("status")
+                        await handle._queue.put(
+                            RunEvent(kind="node_end", node_id=node_id, data={"status": st})
+                        )
+                    final_outputs = update_dict.get("outputs", final_outputs)
+                    final_artifacts = (
+                        update_dict.get("artifacts", final_artifacts) or final_artifacts
+                    )
+            await handle._queue.put(None)  # sentinel
+
+            if paused:
+                handle.status = "paused"
+                handle._result = RunResult(run_id=run_id, status="paused")
+            else:
+                failed = any(
+                    (ns.status if hasattr(ns, "status") else ns.get("status")) == "failed"
+                    for ns in seen_node_states.values()
+                )
+                handle.status = "failed" if failed else "succeeded"
+                handle._result = RunResult(
+                    run_id=run_id,
+                    status=handle.status,
+                    outputs=final_outputs,
+                    artifacts=final_artifacts,
+                )
         except Exception as exc:  # noqa: BLE001
+            await handle._queue.put(RunEvent(kind="error", data={"message": str(exc)}))
+            await handle._queue.put(None)
             handle.status = "failed"
             handle._result = RunResult(run_id=run_id, status="failed", error=str(exc))
         return handle

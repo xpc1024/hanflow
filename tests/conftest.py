@@ -71,6 +71,15 @@ def make_state(run_id: str = "r1", mode: str = "static") -> NexusState:
 
 
 @pytest.fixture
+def hf(tmp_path: Path):
+    """A Hanflow SDK instance backed by FakeProvider (no network)."""
+    from hanflow.config import HanflowConfig
+    from hanflow.sdk import Hanflow
+
+    return Hanflow(HanflowConfig(workspace_root=str(tmp_path / "ws")))
+
+
+@pytest.fixture
 async def ctx(tmp_path: Path):
     trace = NullTraceExporter()
     router = ModelRouter(
