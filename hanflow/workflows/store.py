@@ -17,3 +17,27 @@ class WorkflowStore:
 
     def _path(self, workflow_id: str) -> Path:
         return self.root / f"{workflow_id}.yaml"
+
+    def list(self) -> list[dict[str, str]]:
+        out: list[dict[str, str]] = []
+        for p in sorted(self.root.glob("*.yaml")):
+            out.append({"id": p.stem, "yaml": p.read_text(encoding="utf-8")})
+        return out
+
+    def get(self, workflow_id: str) -> dict[str, str] | None:
+        p = self._path(workflow_id)
+        if not p.exists():
+            return None
+        return {"id": workflow_id, "yaml": p.read_text(encoding="utf-8")}
+
+    def put(self, workflow_id: str, yaml_text: str) -> dict[str, str]:
+        p = self._path(workflow_id)
+        p.write_text(yaml_text, encoding="utf-8")
+        return {"id": workflow_id, "yaml": yaml_text}
+
+    def delete(self, workflow_id: str) -> bool:
+        p = self._path(workflow_id)
+        if p.exists():
+            p.unlink()
+            return True
+        return False

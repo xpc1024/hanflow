@@ -26,6 +26,8 @@ def build_app(hanflow: Any = None) -> FastAPI:
     app.include_router(root)
 
     from hanflow.api.routes import schema as schema_routes
+    from hanflow.api.routes import workflows as workflows_routes
 
     app.include_router(schema_routes.router)
+    app.include_router(workflows_routes.router)
     return app

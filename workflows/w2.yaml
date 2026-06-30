@@ -1,0 +1,7 @@
+
+name: w2
+nodes:
+  - id: a
+    type: LLM
+    config:
+      template: hi
