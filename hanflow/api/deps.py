@@ -7,11 +7,12 @@ trivial to override in tests.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import cast
 
 from fastapi import FastAPI, Request
 
 from hanflow.sdk import Hanflow
+from hanflow.workflows.store import WorkflowStore
 
 
 def get_hanflow(app: FastAPI | Request) -> Hanflow:
@@ -23,15 +24,13 @@ def get_hanflow(app: FastAPI | Request) -> Hanflow:
     return hanflow
 
 
-def get_workflow_store(app: FastAPI | Request) -> Any:
+def get_workflow_store(app: FastAPI | Request) -> WorkflowStore:
     """Resolve (lazily creating) the WorkflowStore attached to the app."""
     state = app.app.state if isinstance(app, Request) else app.state
     store = getattr(state, "workflow_store", None)
     if store is None:
-        from hanflow.workflows.store import WorkflowStore
-
         hanflow = get_hanflow(app)
         root = hanflow.config.workflows.get("root", "./workflows")
         store = WorkflowStore(root=root)
         state.workflow_store = store
-    return store
+    return cast(WorkflowStore, store)
