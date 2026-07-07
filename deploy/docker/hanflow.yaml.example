@@ -1,9 +1,27 @@
-# hanflow.yaml — single-machine minimal config (appendix A)
+# Minimal single-machine config (override as needed)
 workspace_root: ./workspace
+
+models:
+  strong: { provider: openai, model: gpt-4o, api_key: "${OPENAI_KEY}" }
+  fast:   { provider: glm, model: glm-4-flash, api_key: "${GLM_KEY}" }
+
+routing:
+  default: strong
+  fallback_chain: [strong, fast]
+
+mcp_servers:
+  web_search: { transport: inprocess }
+
+persistence:
+  checkpoint: { backend: sqlite, config: { path: ./data/checkpoints.db } }
+  session:    { backend: sqlite, config: { path: ./data/sessions.db } }
+  artifact:   { backend: local_fs, config: { root: ./workspace/artifacts } }
+
+workflows:
+  storage: file
+  root: ./workflows
+
 server:
   host: 0.0.0.0
   port: 8000
   inline_worker: true
-workflows:
-  storage: file
-  root: ./workflows

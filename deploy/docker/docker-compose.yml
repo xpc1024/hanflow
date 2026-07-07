@@ -1,28 +1,49 @@
 services:
   engine:
-    build: ../..
-    ports: ["8000:8000"]
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
     environment:
-      HANFLOW_INLINE_WORKER: "true"
-      DB_URL: postgres+asyncpg://hanflow:hanflow@postgres:5432/hanflow
+      - HANFLOW__WORKSPACE_ROOT=/workspace
+      - HANFLOW__DB_URL=postgresql://hanflow:hanflow@postgres:5432/hanflow
+      - HANFLOW_API_KEY=${HANFLOW_API_KEY:-}
+      - HANFLOW_SERVER__INLINE_WORKER=true
     volumes:
-      - ./hanflow.yaml.example:/app/hanflow.yaml
-      - ../../workflows:/app/workflows
-      - ../../workspace:/app/workspace
-    depends_on: [postgres, redis, minio]
+      - ../../workflows:/workflows
+      - ../../workspace:/workspace
+      - ../../hanflow.yaml:/config/hanflow.yaml
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - engine
+
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: hanflow
       POSTGRES_PASSWORD: hanflow
       POSTGRES_DB: hanflow
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
   redis:
-    image: redis:7
-  minio:
-    image: minio/minio
-    command: server /data
-    volumes: ["miniodata:/data"]
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
 volumes:
-  pgdata: {}
-  miniodata: {}
+  pgdata:
