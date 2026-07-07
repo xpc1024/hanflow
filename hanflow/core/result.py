@@ -77,6 +77,7 @@ class HITLPayload(BaseModel):
     actions: list[Literal["approve", "edit", "reject", "reroute"]]
     paused_at: datetime
     timeout_seconds: int | None = None
+    approver: str | None = None
 
 
 class HITLRecord(BaseModel):
@@ -88,6 +89,8 @@ class HITLRecord(BaseModel):
     decided_by: str
     decided_at: datetime
     duration_seconds: float
+    reason: str | None = None
+    form: dict[str, Any] | None = None
 
 
 class Chunk(BaseModel):
