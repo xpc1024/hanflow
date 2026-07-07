@@ -2,6 +2,7 @@
 import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Plus, Copy, Trash2 } from "lucide-react";
+import { PlusButtonMenu } from "./PlusButtonMenu";
 import { FALLBACK_NODE_META } from "@/lib/dsl/nodeMeta";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { en } from "@/lib/i18n/en";
@@ -114,6 +115,7 @@ export const CanvasNode = memo(function CanvasNode({ id, data, selected }: Props
         {data.label}
       </div>
       <Handle type="source" position={Position.Right} data-testid="handle-source" />
+      {plusOpen && <PlusButtonMenu sourceId={id} onClose={() => setPlusOpen(false)} />}
     </div>
   );
 });
