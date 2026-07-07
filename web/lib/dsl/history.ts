@@ -12,20 +12,20 @@ export class History<T> {
 
   undoPop(): T | null {
     const s = this.undoStack.pop();
-    if (s !== undefined) {
-      this.redoStack.push(s);
-      return s;
-    }
-    return null;
+    return s !== undefined ? s : null;
   }
 
   redoPop(): T | null {
     const s = this.redoStack.pop();
-    if (s !== undefined) {
-      this.undoStack.push(s);
-      return s;
-    }
-    return null;
+    return s !== undefined ? s : null;
+  }
+
+  pushRedo(s: T): void {
+    this.redoStack.push(s);
+  }
+
+  pushUndo(s: T): void {
+    this.undoStack.push(s);
   }
 
   canUndo(): boolean {
