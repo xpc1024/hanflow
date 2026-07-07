@@ -1,0 +1,44 @@
+:root {
+  --canvas-bg: #0f1115;
+  --canvas-bg-grid: #1a1d24;
+  --panel-bg: #16181f;
+  --panel-border: #252830;
+  --text-primary: #e4e7ec;
+  --text-secondary: #98a2b3;
+  --text-disabled: #475467;
+  --node-bg: #1c1f27;
+  --node-border: #2a2e38;
+  --node-border-selected: #ffffff;
+  --node-shadow: 0 1px 3px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.2);
+  --status-running: #3b82f6;
+  --status-success: #22c55e;
+  --status-failed: #ef4444;
+  --status-paused: #eab308;
+  --status-skipped: #6b7280;
+  --accent: #3b82f6;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --note-yellow: #fef08a; --note-yellow-text: #422006;
+  --note-green: #bbf7d0; --note-green-text: #052e16;
+  --note-blue: #bfdbfe; --note-blue-text: #0c1e3e;
+  --note-pink: #fbcfe8; --note-pink-text: #4a044e;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px;
+  --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+  --font-sans: "Geist", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --font-size-node: 13px; --font-size-label: 12px; --font-size-title: 14px;
+}
+
+[data-theme="light"] {
+  --canvas-bg: #f8fafc;
+  --canvas-bg-grid: #e2e8f0;
+  --panel-bg: #ffffff;
+  --panel-border: #e2e8f0;
+  --text-primary: #101828;
+  --text-secondary: #475467;
+  --text-disabled: #98a2b3;
+  --node-bg: #ffffff;
+  --node-border: #d0d5dd;
+  --node-border-selected: #101828;
+  --node-shadow: 0 1px 3px rgba(16,24,40,.08), 0 0 0 1px rgba(16,24,40,.04);
+}
