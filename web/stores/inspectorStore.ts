@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { SensitivityLevel } from "@/lib/dsl/types";
 
 interface DraftNode {
   id?: string;
@@ -6,7 +7,7 @@ interface DraftNode {
   on_error?: Record<string, unknown>;
   retry?: Record<string, unknown> | null;
   timeout_seconds?: number | null;
-  sensitivity?: string;
+  sensitivity?: SensitivityLevel;
   disabled?: boolean;
 }
 

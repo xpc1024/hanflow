@@ -8,7 +8,7 @@ vi.mock("@xyflow/react", () => ({
 }));
 
 describe("CanvasNode", () => {
-  it("renders label + type", () => {
+  it("renders type label", () => {
     render(
       <CanvasNode
         id="a"
@@ -16,7 +16,6 @@ describe("CanvasNode", () => {
         selected={false}
       />
     );
-    expect(screen.getByText("intake")).toBeTruthy();
     expect(screen.getByText("LLM")).toBeTruthy();
   });
 
