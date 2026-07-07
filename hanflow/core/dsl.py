@@ -79,6 +79,7 @@ class WorkflowNode(BaseModel):
     retry: RetryPolicy | None = None
     timeout_seconds: int | None = None
     sensitivity: SensitivityLevel = "public"
+    disabled: bool = False
 
 
 class WorkflowDSL(BaseModel):

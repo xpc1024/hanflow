@@ -19,15 +19,15 @@ _VALID_NODE_TYPES: list[str] = list(get_args(NodeType))
 
 # Per-primitive visual hints + default config (mirrors detailed design §11.3).
 _NODE_META: dict[str, dict[str, Any]] = {
-    "Sequential": {"color": "#6b7280", "group": "control"},
-    "Parallel": {"color": "#6b7280", "group": "control"},
-    "Loop": {"color": "#6b7280", "group": "control"},
-    "Branch": {"color": "#6b7280", "group": "control"},
+    "Sequential": {"color": "#6b7280", "group": "control", "icon": "ListOrdered"},
+    "Parallel": {"color": "#6b7280", "group": "control", "icon": "Columns"},
+    "Loop": {"color": "#6b7280", "group": "control", "icon": "Repeat"},
+    "Branch": {"color": "#6b7280", "group": "control", "icon": "GitBranch"},
     "HITL": {"color": "#eab308", "group": "control", "icon": "🔶"},
-    "LLM": {"color": "#3b82f6", "group": "leaf"},
-    "Tool": {"color": "#22c55e", "group": "leaf"},
-    "Research": {"color": "#6366f1", "group": "leaf"},
-    "Execution": {"color": "#f97316", "group": "leaf"},
+    "LLM": {"color": "#3b82f6", "group": "leaf", "icon": "MessageSquare"},
+    "Tool": {"color": "#22c55e", "group": "leaf", "icon": "Wrench"},
+    "Research": {"color": "#6366f1", "group": "leaf", "icon": "Search"},
+    "Execution": {"color": "#f97316", "group": "leaf", "icon": "Terminal"},
     "Coordinator": {"color": "#a855f7", "group": "dynamic", "icon": "🟣"},
     "Memory": {"color": "#0ea5e9", "group": "state", "icon": "📦"},
     "Subworkflow": {"color": "#0ea5e9", "group": "state", "icon": "🔗"},

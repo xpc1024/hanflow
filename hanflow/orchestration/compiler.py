@@ -141,6 +141,18 @@ def _wrap(executor: Any, node: WorkflowNode, registry: Any, ctx: Any | None = No
         )
         # attach node state
         new_node_states = {**state.node_states, node.id: node_state}
+
+        # disabled skip (Phase 12: topology unchanged, runtime skip, write skipped status)
+        if node.disabled:
+            node_state.status = "skipped"
+            node_state.outputs = {}
+            node_state.ended_at = datetime.now(UTC)
+            return {
+                "node_states": {**new_node_states, node.id: node_state},
+                "artifacts": state.artifacts,
+                "memory_ops": state.memory_ops,
+            }
+
         try:
             if runtime_ctx is None:
                 raise NodeExecutionError(

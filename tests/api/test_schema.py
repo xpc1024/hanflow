@@ -29,3 +29,15 @@ def test_node_schema_has_visual_hints(client):
     body = r.json()
     assert body["visual"]["color"] == "#3b82f6"  # LLM = blue
     assert body["default_config"] == {"template": ""}
+
+
+def test_all_node_types_have_icon(client):
+    """Phase 12 Task 0: every node type should have an icon in visual."""
+    from typing import get_args
+
+    from hanflow.core.dsl import NodeType
+
+    for nt in get_args(NodeType):
+        r = client.get(f"/api/schema/node/{nt}")
+        assert r.status_code == 200
+        assert "icon" in r.json()["visual"], f"{nt} missing icon"
