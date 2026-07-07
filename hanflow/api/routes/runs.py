@@ -64,7 +64,14 @@ async def _drive(handle: Any, entry: dict[str, Any]) -> None:
 @router.get("")
 async def list_runs() -> list[dict[str, Any]]:
     return [
-        {"run_id": e["run_id"], "status": e["status"], "result": e["result"]}
+        {
+            "run_id": e["run_id"],
+            "status": e["status"],
+            "result": e["result"],
+            "workflow_name": e.get("workflow_name"),
+            "started_at": e.get("started_at"),
+            "trigger_source": e.get("trigger_source"),
+        }
         for e in _runs.values()
     ]
 
@@ -74,7 +81,14 @@ async def get_run(run_id: str) -> dict[str, Any]:
     if run_id not in _runs:
         raise HTTPException(status_code=404, detail=f"run not found: {run_id}")
     e = _runs[run_id]
-    return {"run_id": e["run_id"], "status": e["status"], "result": e["result"]}
+    return {
+        "run_id": e["run_id"],
+        "status": e["status"],
+        "result": e["result"],
+        "workflow_name": e.get("workflow_name"),
+        "started_at": e.get("started_at"),
+        "trigger_source": e.get("trigger_source"),
+    }
 
 
 @router.delete("/{run_id}")

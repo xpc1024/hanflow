@@ -191,8 +191,13 @@ class Hanflow:
                     node_states = update_dict.get("node_states", {})
                     ns = node_states.get(node_id)
                     if ns is not None:
-                        seen_node_states[node_id] = ns
                         st = ns.status if hasattr(ns, "status") else ns.get("status")
+                        # Phase 15: emit node_start on first appearance of this node
+                        if node_id not in seen_node_states:
+                            await handle._queue.put(
+                                RunEvent(kind="node_start", node_id=node_id, data={})
+                            )
+                        seen_node_states[node_id] = ns
                         await handle._queue.put(
                             RunEvent(kind="node_end", node_id=node_id, data={"status": st})
                         )

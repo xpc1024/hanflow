@@ -1,8 +1,7 @@
 """Observation endpoints: trace / artifacts / download (§11.7).
 
-v1: trace/artifacts read from the run result; download is a placeholder wired
-to ArtifactStore in Phase 15 (Monitor trace replay). Full trace-tree replay
-(LangSmith) lands in Phase 15.
+Phase 15: /trace returns local span tree (placeholder structure);
+download returns a placeholder URL (signed_url wired in Phase 17).
 """
 
 from __future__ import annotations
@@ -27,8 +26,9 @@ async def trace(run_id: str) -> dict[str, Any]:
     result = _get_result(run_id)
     return {
         "run_id": run_id,
-        "outputs": result.get("outputs", {}),
-        "trace_events": [],  # full trace replay wired in Phase 15
+        "trace_tree": None,  # Phase 17: wire LocalTraceProvider
+        "langsmith_url": None,
+        "source": "local",
     }
 
 
@@ -41,10 +41,9 @@ async def artifacts(run_id: str) -> list[dict[str, Any]]:
 
 @router.get("/api/artifacts/{run_id}/{artifact_id}/download")
 async def download(run_id: str, artifact_id: str) -> dict[str, Any]:
-    # Phase 15 wires this to ArtifactStore.signed_url; v1 returns a placeholder.
     return {
         "run_id": run_id,
         "artifact_id": artifact_id,
         "url": None,
-        "note": "signed_url wired in Phase 15 (Monitor)",
+        "note": "signed_url wired in Phase 17",
     }

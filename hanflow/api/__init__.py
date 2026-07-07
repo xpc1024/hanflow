@@ -50,4 +50,8 @@ def build_app(hanflow: Any = None) -> FastAPI:
     app.include_router(runs_ws_routes.router)
     app.include_router(hitl_routes.router)
     app.include_router(observe_routes.router)
+
+    from hanflow.api.routes import webhooks as webhooks_routes
+    app.include_router(webhooks_routes.router)
+
     return app
