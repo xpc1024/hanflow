@@ -1,6 +1,6 @@
 "use client";
-import { StudioShell } from "@/components/canvas/StudioShell";
+import { WorkflowListPage } from "@/components/workflow/WorkflowListPage";
 
 export default function Home() {
-  return <StudioShell />;
+  return <WorkflowListPage />;
 }

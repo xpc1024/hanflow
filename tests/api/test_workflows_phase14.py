@@ -1,26 +1,29 @@
 """Tests for Phase 14 workflows API: create 409, list meta, validate structured, dry-run SSE."""
 from __future__ import annotations
+import uuid
 
 
 def test_create_returns_409_on_duplicate(client):
+    uid = f"dup_{uuid.uuid4().hex[:8]}"
     yaml = "name: dup\nnodes:\n  - id: a\n    type: LLM\n    config:\n      template: hi\n"
-    r1 = client.post("/api/workflows", json={"id": "dup", "yaml": yaml})
+    r1 = client.post("/api/workflows", json={"id": uid, "yaml": yaml})
     assert r1.status_code == 200
-    r2 = client.post("/api/workflows", json={"id": "dup", "yaml": yaml})
+    r2 = client.post("/api/workflows", json={"id": uid, "yaml": yaml})
     assert r2.status_code == 409
 
 
 def test_list_returns_workflow_meta(client):
+    uid = f"mf_{uuid.uuid4().hex[:8]}"
     yaml = (
         "name: My Flow\ndescription: test\nnodes:\n"
         "  - id: a\n    type: LLM\n  - id: b\n    type: Tool\n    depends_on: [a]\n"
         "metadata:\n  tags: [prod]\n"
     )
-    client.post("/api/workflows", json={"id": "mf", "yaml": yaml})
+    client.post("/api/workflows", json={"id": uid, "yaml": yaml})
     r = client.get("/api/workflows")
     items = r.json()
     assert len(items) >= 1
-    item = next(i for i in items if i["id"] == "mf")
+    item = next(i for i in items if i["id"] == uid)
     assert item["name"] == "My Flow"
     assert item["nodeCount"] == 2
     assert "prod" in item.get("tags", [])
@@ -41,8 +44,10 @@ def test_validate_returns_structured_errors(client):
 
 
 def test_dry_run_returns_sse_stream(client):
+    uid = f"dr_{uuid.uuid4().hex[:8]}"
     yaml = "name: dr\nnodes:\n  - id: a\n    type: LLM\n    config:\n      template: hello\n"
-    with client.stream("POST", "/api/workflows/dr/dry-run", json={"yaml": yaml, "inputs": {}}) as resp:
+    client.post("/api/workflows", json={"id": uid, "yaml": yaml})
+    with client.stream("POST", f"/api/workflows/{uid}/dry-run", json={"yaml": yaml, "inputs": {}}) as resp:
         assert resp.status_code == 200
         lines = []
         for line in resp.iter_lines():
