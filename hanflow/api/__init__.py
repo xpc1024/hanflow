@@ -10,12 +10,22 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 
 def build_app(hanflow: Any = None) -> FastAPI:
     """Build the FastAPI app. ``hanflow`` is the SDK instance (stored for DI)."""
     app = FastAPI(title="Hanflow", version="0.1.0")
     app.state.hanflow = hanflow
+
+    # CORS: allow frontend dev server (localhost:3000) to call API
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     root = APIRouter()
 
