@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -7,6 +8,7 @@ import { Wand2, Palette, Save, Play } from "lucide-react";
 import { DryRunStatus } from "./dryrun/DryRunStatus";
 
 export function TopBar() {
+  const router = useRouter();
   const { alignAll, snapToGridAll } = useCanvasStore();
   const { current, saveCurrent, runDryRun } = useWorkflowStore();
   const { toggleTheme } = useUiStore();
@@ -46,6 +48,28 @@ export function TopBar() {
     else runDryRun({ inputs: {} });
   };
 
+  const onRun = async () => {
+    // Save first if dirty
+    if (current?.dirty) {
+      const ok = await saveCurrent();
+      if (!ok) { alert("Cannot run: fix validation errors first"); return; }
+    }
+    if (!useWorkflowStore.getState().current) {
+      alert("Save the workflow first"); return;
+    }
+    const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const dsl = useCanvasStore.getState().getDsl(current?.dsl.name ?? "untitled");
+    const { toYaml } = await import("@/lib/dsl/yaml");
+    const yamlText = toYaml(dsl);
+    const r = await fetch(`${API}/api/runs`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ yaml: yamlText, inputs: {} }),
+    });
+    if (!r.ok) { alert("Failed to start run"); return; }
+    const { run_id } = await r.json();
+    router.push(`/runs/${run_id}`);
+  };
+
   return (
     <>
       <div style={{ height: 48, display: "flex", alignItems: "center", gap: 8, padding: "0 16px", borderBottom: "1px solid var(--panel-border)", background: "var(--panel-bg)" }}>
@@ -57,7 +81,7 @@ export function TopBar() {
           {nodeCount > 0 ? `${nodeCount} nodes` : "empty"} {!liveValidation.valid ? `(${liveValidation.errors.length} errors)` : ""}
         </span>
         <button onClick={onDryRun} style={toolBtn}><Wand2 size={14} /> Dry-run</button>
-        <button disabled title="Available in Monitor (Phase 15)" style={inactiveBtn}><Play size={14} /> Run</button>
+        <button onClick={onRun} style={nodeCount > 0 ? activeBtn : inactiveBtn} disabled={nodeCount === 0}><Play size={14} /> Run</button>
         <button onClick={() => alignAll()} style={toolBtn}>{en.topbar.autoAlign}</button>
         <button onClick={() => toggleTheme()} style={toolBtn}><Palette size={14} /></button>
       </div>
