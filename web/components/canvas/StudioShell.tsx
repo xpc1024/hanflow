@@ -43,10 +43,23 @@ export function StudioShell() {
 
   const { current, dryRun, markDirty } = useWorkflowStore();
 
-  // Link canvas changes to workflowStore dirty
+  // Auto-create a workflow session if none exists (e.g. direct visit to homepage)
+  useEffect(() => {
+    if (!useWorkflowStore.getState().current) {
+      useWorkflowStore.getState().setCurrent({
+        id: "untitled",
+        dsl: { name: "Untitled", nodes: [] },
+        dirty: false,
+        lastSavedAt: null,
+        validation: { valid: true, errors: [] },
+      });
+    }
+  }, []);
+
+  // Link canvas changes to workflowStore dirty (only if workflow session exists)
   useEffect(() => {
     const unsub = useCanvasStore.subscribe((s) => {
-      if (s.dirty) markDirty();
+      if (s.dirty && useWorkflowStore.getState().current) markDirty();
     });
     return unsub;
   }, [markDirty]);

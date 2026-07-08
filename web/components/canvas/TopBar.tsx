@@ -12,9 +12,35 @@ export function TopBar() {
   const { toggleTheme } = useUiStore();
   const dirty = current?.dirty ?? false;
   const valid = current?.validation?.valid ?? true;
+  const nodeCount = useCanvasStore((s) => s.nodes.length);
 
-  const onSave = async () => { const ok = await saveCurrent(); if (!ok) alert("Cannot save: validation errors"); };
+  // Re-evaluate validation live based on canvas state
+  const liveValidation = current?.validation ?? { valid: nodeCount > 0, errors: [] };
+
+  const onSave = async () => {
+    if (!current) {
+      // No workflow session - create one
+      const name = prompt("Workflow name?", "my-flow");
+      if (!name) return;
+      try {
+        await useWorkflowStore.getState().createWorkflow(name);
+      } catch (e: any) { alert(e.message); return; }
+    }
+    const ok = await saveCurrent();
+    if (!ok) alert("Cannot save: validation errors. Make sure you have exactly one entry node.");
+  };
+
   const onDryRun = () => {
+    if (!current) {
+      // Create temp session for dry-run
+      useWorkflowStore.getState().setCurrent({
+        id: "temp-dryrun",
+        dsl: { name: "temp", nodes: [] },
+        dirty: false,
+        lastSavedAt: null,
+        validation: { valid: true, errors: [] },
+      });
+    }
     const sel = useCanvasStore.getState().transient.selectedNodeIds[0];
     if (sel) runDryRun({ nodeId: sel, inputs: {} });
     else runDryRun({ inputs: {} });
@@ -27,8 +53,8 @@ export function TopBar() {
         {dirty && <span style={{ color: "var(--accent)", fontSize: 20 }}>*</span>}
         <div style={{ flex: 1 }} />
         <button onClick={onSave} disabled={!dirty} style={dirty ? activeBtn : inactiveBtn}><Save size={14} /> Save</button>
-        <span style={{ color: valid ? "var(--status-success)" : "var(--danger)", fontSize: 12 }}>
-          {valid ? `${current?.dsl.nodes.length ?? 0} valid` : `${current?.validation.errors.length ?? 0} errors`}
+        <span style={{ color: liveValidation.valid && nodeCount > 0 ? "var(--status-success)" : "var(--danger)", fontSize: 12 }}>
+          {nodeCount > 0 ? `${nodeCount} nodes` : "empty"} {!liveValidation.valid ? `(${liveValidation.errors.length} errors)` : ""}
         </span>
         <button onClick={onDryRun} style={toolBtn}><Wand2 size={14} /> Dry-run</button>
         <button disabled title="Available in Monitor (Phase 15)" style={inactiveBtn}><Play size={14} /> Run</button>
