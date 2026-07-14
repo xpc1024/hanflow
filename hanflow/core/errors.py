@@ -104,3 +104,9 @@ class MaxDelegateDepthExceeded(HanflowError):
 
 class MaxSubworkflowDepthExceeded(HanflowError):
     code = "SUBWORKFLOW_DEPTH"
+
+
+class CLIError(HanflowError):
+    """CLI operation error (connection failed / not found / conflict)."""
+
+    code = "CLI_ERROR"

@@ -233,6 +233,18 @@ class Hanflow:
         handle = asyncio.run(self.run(*args, **kwargs))
         return asyncio.run(handle.wait())
 
+    # --- introspection (CLI-friendly) ------------------------------------- #
+    async def list_tools(self, server: str | None = None) -> list[dict[str, Any]]:
+        """List available tools as plain dicts.
+
+        Thin public accessor over :meth:`MCPBus.list_tools` so the CLI does not
+        need to reach into private components. Returns ``model_dump()`` so the
+        result is JSON-serialisable plain data.
+        """
+        await self._ensure_components()
+        tools = await self._bus.list_tools(server)
+        return [t.model_dump() for t in tools]
+
     # --- convenience builders (UX sugar) ----------------------------------- #
     def static(self, *, nodes: list[dict[str, Any]], name: str = "static") -> WorkflowDSL:
         return WorkflowDSL(name=name, nodes=[WorkflowNode(**n) for n in nodes])
