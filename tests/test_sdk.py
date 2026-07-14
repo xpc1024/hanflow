@@ -49,3 +49,20 @@ async def test_run_tool_node_end_to_end(hf):
     handle = await hf.run(dsl)
     result = await handle.wait()
     assert result.status == "succeeded"
+
+
+@pytest.mark.asyncio
+async def test_list_tools_returns_dicts_for_cli(hf):
+    """Public list_tools accessor returns plain dicts (CLI-friendly)."""
+    tools = await hf.list_tools()
+    assert isinstance(tools, list)
+    assert all(isinstance(t, dict) for t in tools)
+    names = {t["name"] for t in tools}
+    assert "say" in names  # the default in-process echo server exposes "say"
+
+
+@pytest.mark.asyncio
+async def test_list_tools_filters_by_server(hf):
+    tools = await hf.list_tools(server="echo")
+    assert all(t["server"] == "echo" for t in tools)
+    assert tools  # the default echo.say tool is present
