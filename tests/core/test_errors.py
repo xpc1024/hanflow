@@ -3,6 +3,7 @@ import pytest
 from hanflow.core.errors import (
     BudgetExceededError,
     CheckpointCorruptError,
+    CLIError,
     CompileError,
     DSLValidationError,
     HanflowError,
@@ -75,3 +76,12 @@ def test_can_be_raised_and_caught_as_base():
     with pytest.raises(HanflowError) as exc_info:
         raise BudgetExceededError("over")
     assert exc_info.value.code == "BUDGET_EXCEEDED"
+
+
+def test_cli_error_has_stable_code():
+    err = CLIError("run not found: abc")
+    assert isinstance(err, HanflowError)
+    assert err.code == "CLI_ERROR"
+    assert err.retryable is False
+    assert "CLI_ERROR" in str(err)
+    assert "run not found: abc" in str(err)
