@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
 
-from hanflow.models.providers.base import ModelResponse, TokenUsage
+from hanflow.models.providers.base import ModelResponse, StreamChunk, TokenUsage
 from hanflow.observability.trace import NullTraceExporter
 
 
@@ -35,6 +36,18 @@ class FakeProvider:
             usage=TokenUsage(
                 input_tokens=1, output_tokens=1, total_tokens=2, cost_usd=0.001, latency_ms=10
             ),
+            model_used=model,
+            provider=self.name,
+        )
+
+    async def stream(
+        self, model: str, messages: list, **kwargs: Any
+    ) -> AsyncIterator[StreamChunk]:
+        if self.fail_with is not None:
+            raise self.fail_with
+        self.calls.append((model, messages))
+        yield StreamChunk(
+            delta=f"[{self.name}/{model}] ok",
             model_used=model,
             provider=self.name,
         )
