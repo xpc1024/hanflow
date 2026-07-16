@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from hanflow.models.providers.openai import OpenAIProvider
 
 
@@ -19,3 +21,7 @@ class VLLMProvider(OpenAIProvider):
 
     def supported_models(self) -> list[str]:
         return []  # served models are discovered at runtime via /v1/models
+
+    async def stream(self, model: str, messages: list[Any], **kwargs: Any):  # type: ignore[override]
+        raise NotImplementedError("stream() for vllm lands in next cycle (2026-W30+)")
+        yield  # pragma: no cover — satisfy async generator signature

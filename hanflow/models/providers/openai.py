@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
-from hanflow.models.providers.base import ModelResponse, TokenUsage
+from hanflow.core.errors import ModelTimeoutError
+from hanflow.models.providers.base import ModelResponse, StreamChunk, TokenUsage
 
 _PRICING = {  # per 1K tokens, USD — kept conservative; override via config in prod
     "gpt-4o": (0.005, 0.015),
@@ -64,3 +66,50 @@ class OpenAIProvider:
             provider=self.name,
             raw=resp.model_dump() if hasattr(resp, "model_dump") else None,
         )
+
+    async def stream(
+        self, model: str, messages: list[Any], **kwargs: Any
+    ) -> AsyncIterator[StreamChunk]:
+        """Stream chunks (§design §6). Wraps SDK errors as ModelTimeoutError.
+
+        Connection-phase failures keep ``retryable=True`` (class default);
+        mid-flight failures set ``retryable=False`` on the raised instance.
+        """
+        from openai import AsyncOpenAI
+
+        try:
+            client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+            s = await client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=True,
+                stream_options={"include_usage": True},
+                **kwargs,
+            )
+        except Exception as e:
+            raise ModelTimeoutError(f"openai stream connect failed: {e}") from e
+        try:
+            async for chunk in s:
+                choices = getattr(chunk, "choices", None) or []
+                delta = choices[0].delta.content if choices else ""
+                usage = getattr(chunk, "usage", None)
+                finish = choices[0].finish_reason if choices else None
+                if usage:
+                    yield StreamChunk(
+                        delta=delta or "",
+                        usage=TokenUsage(
+                            input_tokens=getattr(usage, "prompt_tokens", 0),
+                            output_tokens=getattr(usage, "completion_tokens", 0),
+                            total_tokens=getattr(usage, "total_tokens", 0),
+                            cost_usd=0.0,
+                            latency_ms=0.0,
+                        ),
+                        finish_reason=finish,
+                        raw=chunk.model_dump() if hasattr(chunk, "model_dump") else None,
+                    )
+                else:
+                    yield StreamChunk(delta=delta or "", finish_reason=finish)
+        except Exception as e:
+            err = ModelTimeoutError(f"openai stream mid-flight failed: {e}")
+            err.retryable = False  # P4b: retryable is a class attr; override on the instance
+            raise err from e

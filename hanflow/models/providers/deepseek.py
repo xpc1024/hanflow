@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from hanflow.models.providers.openai import OpenAIProvider
 
 
@@ -21,3 +23,7 @@ class DeepSeekProvider(OpenAIProvider):
 
     def supported_models(self) -> list[str]:
         return ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"]
+
+    async def stream(self, model: str, messages: list[Any], **kwargs: Any):  # type: ignore[override]
+        raise NotImplementedError("stream() for deepseek lands in next cycle (2026-W30+)")
+        yield  # pragma: no cover — satisfy async generator signature

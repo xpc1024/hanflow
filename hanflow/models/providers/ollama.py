@@ -45,3 +45,7 @@ class OllamaProvider:
             model_used=model,
             provider=self.name,
         )
+
+    async def stream(self, model: str, messages: list[Any], **kwargs: Any):  # type: ignore[override]
+        raise NotImplementedError("stream() for ollama lands in next cycle (2026-W30+)")
+        yield  # pragma: no cover — satisfy async generator signature
