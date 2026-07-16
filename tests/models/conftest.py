@@ -22,6 +22,11 @@ class FakeProvider:
         self.supported = models or ["m1"]
         self.calls: list[tuple[str, list]] = []
         self.fail_with: Any = None
+        # When set, ``stream`` yields one ``StreamChunk`` per token from this list
+        # (each token becomes ``delta``). When ``None`` (default), ``stream``
+        # yields a single canned chunk — preserving the pre-T3 behaviour so
+        # existing tests keep passing.
+        self.stream_tokens: list[str] | None = None
 
     @property
     def is_local(self) -> bool:
@@ -46,6 +51,10 @@ class FakeProvider:
         if self.fail_with is not None:
             raise self.fail_with
         self.calls.append((model, messages))
+        if self.stream_tokens is not None:
+            for tok in self.stream_tokens:
+                yield StreamChunk(delta=tok, model_used=model, provider=self.name)
+            return
         yield StreamChunk(
             delta=f"[{self.name}/{model}] ok",
             model_used=model,

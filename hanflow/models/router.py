@@ -18,11 +18,12 @@ form internally.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any, cast
 
-from hanflow.core.errors import HanflowError
+from hanflow.core.errors import HanflowError, ModelTimeoutError
 from hanflow.core.result import SensitivityLevel
-from hanflow.models.providers.base import ModelResponse
+from hanflow.models.providers.base import ModelResponse, StreamChunk
 from hanflow.models.strategies.base import ModelCandidate, RoutingRequest
 from hanflow.observability.trace import TraceExporter
 
@@ -68,6 +69,90 @@ class ModelRouter:
             candidates = self._collect_candidates(request)
             chosen = self._arbitrate(candidates, request)
             return await self._invoke_with_fallback(chosen, request, kwargs)
+
+    async def stream(
+        self,
+        messages: list[Any],
+        *,
+        role: str | None = None,
+        task_type: str | None = None,
+        sensitivity: SensitivityLevel = "public",
+        prefer: tuple[str, str] | None = None,
+        run_budget_remaining: float = 1.0,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamChunk]:
+        """Streaming variant of :meth:`complete` (§design Router.stream).
+
+        Fallback semantics differ from the non-streaming path: a provider may
+        only be swapped *before* the first chunk is yielded to the caller. The
+        first chunk is therefore prefetched from each candidate in turn; once it
+        succeeds the router commits to that provider and any subsequent
+        mid-flight ``HanflowError`` propagates directly (the caller has already
+        received partial output and a silent retry would be incorrect).
+        """
+        request = RoutingRequest(
+            messages=messages,
+            role=role,
+            task_type=task_type,
+            sensitivity=sensitivity,
+            prefer=prefer,
+            run_budget_remaining=run_budget_remaining,
+        )
+        async with self.trace.span("llm.stream", kind="llm", role=role, task_type=task_type):
+            candidates = self._collect_candidates(request)
+            chosen = self._arbitrate(candidates, request)
+            async for chunk in self._stream_with_prefetch_fallback(chosen, request, kwargs):
+                yield chunk
+
+    async def _stream_with_prefetch_fallback(
+        self,
+        chosen: ModelCandidate,
+        request: RoutingRequest,
+        kwargs: dict[str, Any],
+    ) -> AsyncIterator[StreamChunk]:
+        """Prefetch the first chunk to decide whether to fall back.
+
+        Order tried: ``chosen`` first, then each candidate of the fallback chain
+        that is not the same (provider, model) pair. On a ``HanflowError`` before
+        the first yield the next candidate is tried; once a first chunk has been
+        yielded the stream is committed and later errors propagate unchanged.
+        """
+        # Dedup by (provider, model): chosen carries reason="default" while the
+        # chain carries reason="fallback", so ModelCandidate equality would not
+        # detect the same underlying provider/model pair.
+        tried: set[tuple[str, str]] = {(chosen.provider, chosen.model)}
+        chain: list[ModelCandidate] = [chosen]
+        for cand in self._fallback_chain():
+            key = (cand.provider, cand.model)
+            if key in tried:
+                continue
+            tried.add(key)
+            chain.append(cand)
+
+        last_err: HanflowError | None = None
+        for cand in chain:
+            provider = self.providers.get(cand.provider)
+            if provider is None:
+                continue
+            try:
+                it = provider.stream(cand.model, request.messages, **kwargs)
+                first = await it.__anext__()
+            except HanflowError as e:
+                # Failure before the first token: move to the next candidate.
+                last_err = e
+                continue
+            except StopAsyncIteration:
+                # Provider yielded nothing; treat as no output and try next.
+                continue
+            # First chunk obtained: commit to this provider, no further fallback.
+            yield first
+            async for chunk in it:
+                yield chunk
+            return
+
+        if last_err is not None:
+            raise last_err
+        raise ModelTimeoutError("all providers failed before first stream token")
 
     # ---- candidate collection + arbitration ------------------------------ #
     def _collect_candidates(self, request: RoutingRequest) -> list[ModelCandidate]:
