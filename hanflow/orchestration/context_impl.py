@@ -8,6 +8,7 @@ the HITL node wrapper (Phase 8 control executors) raises LangGraph's interrupt.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -16,6 +17,7 @@ from typing import Any, cast
 from hanflow.core.result import Chunk, HITLPayload, MemoryOp, SensitivityLevel
 from hanflow.core.state import NexusState
 from hanflow.isolation.sandbox import AgentSpec, RunSandbox, enforce_tool_whitelist
+from hanflow.models.providers.base import StreamChunk
 from hanflow.observability.trace import TraceExporter
 
 
@@ -34,6 +36,7 @@ class RuntimeContextImpl:
         workspace_mgr: Any,
         sandbox: RunSandbox,
         named_models: dict[str, tuple[str, str]] | None = None,
+        run_handle_queue: asyncio.Queue | None = None,
     ) -> None:
         self.state = state
         self._router = router
@@ -48,6 +51,10 @@ class RuntimeContextImpl:
         # named_models: {"strong": ("openai","gpt-4o"), ...} from config (§4.7).
         # Used to resolve PUBLIC prefer="strong" → ("openai","gpt-4o") tuple.
         self._named_models = named_models or {}
+        # Optional RunHandle event queue (§5a). When attached, emit_run_event
+        # pushes RunEvents (llm_token / node_*) so the host can stream them to
+        # the SDK caller. None for sub-agents / isolated tests → silent drop.
+        self._run_handle_queue = run_handle_queue
 
     # --- GraphRuntime ------------------------------------------------------
     def emit_hitl(self, payload: HITLPayload) -> None:
@@ -76,6 +83,35 @@ class RuntimeContextImpl:
             prefer=resolved,
             **kwargs,
         )
+
+    async def stream(
+        self,
+        messages: list[Any],
+        *,
+        role: str | None = None,
+        task_type: str | None = None,
+        sensitivity: SensitivityLevel = "public",
+        prefer: str | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamChunk]:
+        """Streaming variant of :meth:`complete` (§design §4/§5a).
+
+        Resolves the named-model ``prefer`` string to a (provider, model) tuple
+        exactly like ``complete`` does, then yields ``StreamChunk``s from
+        ``ModelRouter.stream``. Callers (e.g. the LLM node executor) may forward
+        each chunk to ``emit_run_event`` so the host ``RunHandle`` can stream
+        ``llm_token`` events to the SDK caller in real time.
+        """
+        resolved = self._resolve_named_model(prefer) if prefer else None
+        async for chunk in self._router.stream(
+            messages,
+            role=role,
+            task_type=task_type,
+            sensitivity=sensitivity,
+            prefer=resolved,
+            **kwargs,
+        ):
+            yield chunk
 
     def _resolve_named_model(self, name: str) -> tuple[str, str] | None:
         """Map a config named model ('strong'/'fast'/...) → (provider, model).
@@ -147,6 +183,18 @@ class RuntimeContextImpl:
 
     async def event(self, name: str, **attrs: Any) -> None:
         await self.trace.event(name, **attrs)
+
+    # --- RunHandle event push (§5a) ---------------------------------------
+    async def emit_run_event(self, event: Any) -> None:
+        """Push a ``RunEvent`` (llm_token / node_* / ...) onto the host queue.
+
+        When a ``RunHandle`` queue is attached (the top-level run), this is how
+        streaming LLM tokens and node lifecycle events reach the SDK caller in
+        real time. When no queue is attached (sub-agents spawned via
+        ``spawn_agent`` / isolated unit tests) the event is silently dropped.
+        """
+        if self._run_handle_queue is not None:
+            await self._run_handle_queue.put(event)
 
     # --- Sub-agent / sub-workflow ------------------------------------------
     async def compile_subgraph(self, dsl: Any) -> Any:
