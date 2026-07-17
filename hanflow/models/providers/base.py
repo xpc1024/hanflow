@@ -13,13 +13,11 @@ from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel
 
-
-class TokenUsage(BaseModel):
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
-    cost_usd: float
-    latency_ms: float
+# StreamChunk & TokenUsage are defined in ``hanflow.core.result`` so the core
+# layer can reference streaming/usage types without a core → models dependency
+# (CHARTER §3). They are re-exported here for back-compat with all existing
+# ``from hanflow.models.providers.base import StreamChunk / TokenUsage`` sites.
+from hanflow.core.result import StreamChunk, TokenUsage
 
 
 class ModelResponse(BaseModel):
@@ -28,21 +26,6 @@ class ModelResponse(BaseModel):
     usage: TokenUsage
     model_used: str
     provider: str
-    raw: dict[str, Any] | None = None
-
-
-class StreamChunk(BaseModel):
-    """One chunk of a streaming LLM response (§design StreamChunk).
-
-    Intermediate chunks carry only ``delta``; the final chunk carries
-    ``usage`` + ``finish_reason``.
-    """
-
-    delta: str = ""
-    model_used: str = ""
-    provider: str = ""
-    usage: TokenUsage | None = None
-    finish_reason: str | None = None
     raw: dict[str, Any] | None = None
 
 

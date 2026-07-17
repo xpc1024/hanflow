@@ -18,14 +18,13 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from hanflow.core.result import Chunk, HITLPayload, MemoryOp, SensitivityLevel
+from hanflow.core.result import Chunk, HITLPayload, MemoryOp, SensitivityLevel, StreamChunk
 from hanflow.core.state import NexusState
 
 if TYPE_CHECKING:
     # Annotations-only imports to avoid a runtime cycle
     # (sdk → ... → core; models.providers.base is harmless but kept here for
     #  symmetry and to keep the module body free of provider deps).
-    from hanflow.models.providers.base import StreamChunk
     from hanflow.sdk import RunEvent
 
 
