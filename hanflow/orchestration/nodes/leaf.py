@@ -34,6 +34,40 @@ class LLMExecutor:
         messages = [{"role": "user", "content": prompt}]
         prefer = cfg.get("model")  # named-model string, e.g. "strong"
         role = cfg.get("role")
+        if cfg.get("stream"):  # streaming branch (§design §5)
+            from hanflow.sdk import RunEvent
+
+            content_parts: list[str] = []
+            final_usage = None
+            first_model = None
+            async for chunk in ctx.stream(
+                messages,
+                role=role,
+                prefer=prefer,
+                sensitivity=node.sensitivity,
+            ):
+                if chunk.delta:
+                    content_parts.append(chunk.delta)
+                    await ctx.emit_run_event(
+                        RunEvent(
+                            kind="llm_token",
+                            node_id=node.id,
+                            data={"delta": chunk.delta},
+                        )
+                    )
+                if chunk.usage is not None:
+                    final_usage = chunk.usage
+                if chunk.model_used and not first_model:
+                    first_model = chunk.model_used
+            return AtomResult(
+                output={
+                    "content": "".join(content_parts),
+                    "model": first_model,
+                    "usage": final_usage,
+                    "chunk_count": len(content_parts),
+                },
+                next_action=NextAction(type="continue"),
+            )
         resp = await ctx.complete(
             messages,
             role=role,
