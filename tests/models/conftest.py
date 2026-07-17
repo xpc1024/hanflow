@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
 
-from hanflow.models.providers.base import ModelResponse, TokenUsage
+from hanflow.models.providers.base import ModelResponse, StreamChunk, TokenUsage
 from hanflow.observability.trace import NullTraceExporter
 
 
@@ -21,6 +22,11 @@ class FakeProvider:
         self.supported = models or ["m1"]
         self.calls: list[tuple[str, list]] = []
         self.fail_with: Any = None
+        # When set, ``stream`` yields one ``StreamChunk`` per token from this list
+        # (each token becomes ``delta``). When ``None`` (default), ``stream``
+        # yields a single canned chunk — preserving the pre-T3 behaviour so
+        # existing tests keep passing.
+        self.stream_tokens: list[str] | None = None
 
     @property
     def is_local(self) -> bool:
@@ -35,6 +41,22 @@ class FakeProvider:
             usage=TokenUsage(
                 input_tokens=1, output_tokens=1, total_tokens=2, cost_usd=0.001, latency_ms=10
             ),
+            model_used=model,
+            provider=self.name,
+        )
+
+    async def stream(
+        self, model: str, messages: list, **kwargs: Any
+    ) -> AsyncIterator[StreamChunk]:
+        if self.fail_with is not None:
+            raise self.fail_with
+        self.calls.append((model, messages))
+        if self.stream_tokens is not None:
+            for tok in self.stream_tokens:
+                yield StreamChunk(delta=tok, model_used=model, provider=self.name)
+            return
+        yield StreamChunk(
+            delta=f"[{self.name}/{model}] ok",
             model_used=model,
             provider=self.name,
         )

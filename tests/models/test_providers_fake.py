@@ -27,7 +27,7 @@ async def test_fake_streams_tokens():
     chunks = []
     async for ch in p.stream("m", []):
         chunks.append(ch)
-    assert chunks == ["a", "b", "c"]
+    assert [c.delta for c in chunks] == ["a", "b", "c"]
 
 
 def test_fake_satisfies_protocol():

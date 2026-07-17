@@ -26,8 +26,11 @@ def test_v0_all_subsystems_importable():
     import hanflow.retrieval  # noqa: F401
     import hanflow.sdk  # noqa: F401
     import hanflow.tools  # noqa: F401
+    import hanflow.workflows  # noqa: F401
 
-    assert hanflow.__version__ == "0.1.0"
+    # Version is non-empty; not pinned to a literal so this test doesn't rot
+    # on every release.
+    assert hanflow.__version__
 
 
 def test_top_level_api_exports():

@@ -1,0 +1,10 @@
+name: My Flow
+description: test
+nodes:
+  - id: a
+    type: LLM
+  - id: b
+    type: Tool
+    depends_on: [a]
+metadata:
+  tags: [prod]

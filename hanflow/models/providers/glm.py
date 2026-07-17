@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
-from hanflow.models.providers.base import ModelResponse, TokenUsage
+from hanflow.core.errors import ModelTimeoutError
+from hanflow.models.providers.base import ModelResponse, StreamChunk, TokenUsage
 
 _PRICING = {
     "glm-4-plus": (0.005, 0.005),
@@ -31,7 +33,7 @@ class GLMProvider:
         return (usage.input_tokens / 1000) * in_p + (usage.output_tokens / 1000) * out_p
 
     async def complete(self, model: str, messages: list[Any], **kwargs: Any) -> ModelResponse:
-        from zhipuai import ZhipuAI  # type: ignore[import-not-found]
+        from zhipuai import ZhipuAI  # type: ignore[import-untyped]
 
         client = ZhipuAI(api_key=self.api_key)
         t0 = time.monotonic()
@@ -62,3 +64,45 @@ class GLMProvider:
             model_used=model,
             provider=self.name,
         )
+
+    async def stream(
+        self, model: str, messages: list[Any], **kwargs: Any
+    ) -> AsyncIterator[StreamChunk]:
+        """Stream chunks (§design §6 glm). Async direct iteration, no list().
+
+        Connection-phase failures keep ``retryable=True`` (class default);
+        mid-flight failures set ``retryable=False`` on the raised instance.
+        """
+        from zhipuai import ZhipuAI
+
+        try:
+            client = ZhipuAI(api_key=self.api_key)
+            s = await client.chat.completions.create(
+                model=model, messages=messages, stream=True, **kwargs
+            )
+        except Exception as e:
+            raise ModelTimeoutError(f"glm stream connect failed: {e}") from e
+        try:
+            async for chunk in s:
+                choices = getattr(chunk, "choices", None) or []
+                delta = choices[0].delta.content if choices else ""
+                usage = getattr(chunk, "usage", None)
+                finish = choices[0].finish_reason if choices else None
+                if usage:
+                    yield StreamChunk(
+                        delta=delta or "",
+                        usage=TokenUsage(
+                            input_tokens=getattr(usage, "prompt_tokens", 0),
+                            output_tokens=getattr(usage, "completion_tokens", 0),
+                            total_tokens=getattr(usage, "total_tokens", 0),
+                            cost_usd=0.0,
+                            latency_ms=0.0,
+                        ),
+                        finish_reason=finish,
+                    )
+                else:
+                    yield StreamChunk(delta=delta or "", finish_reason=finish)
+        except Exception as e:
+            err = ModelTimeoutError(f"glm stream mid-flight failed: {e}")
+            err.retryable = False  # P4b: retryable is a class attr; override on the instance
+            raise err from e

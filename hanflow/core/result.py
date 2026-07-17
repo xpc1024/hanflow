@@ -102,6 +102,37 @@ class Chunk(BaseModel):
     metadata: dict[str, Any] = {}
 
 
+class TokenUsage(BaseModel):
+    """Token/cost accounting for one model call (§4.2 provider contract).
+
+    Lives here (core) so :class:`StreamChunk` and :class:`ModelResponse`-style
+    consumers in lower layers can reference it without inverting the layering
+    (core → models). The provider layer re-exports it from
+    ``hanflow.models.providers.base`` for back-compat.
+    """
+
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    cost_usd: float
+    latency_ms: float
+
+
+class StreamChunk(BaseModel):
+    """One chunk of a streaming LLM response (§design StreamChunk).
+
+    Intermediate chunks carry only ``delta``; the final chunk carries
+    ``usage`` + ``finish_reason``.
+    """
+
+    delta: str = ""
+    model_used: str = ""
+    provider: str = ""
+    usage: TokenUsage | None = None
+    finish_reason: str | None = None
+    raw: dict[str, Any] | None = None
+
+
 class NextAction(BaseModel):
     """What the engine should do after an executor returns."""
 

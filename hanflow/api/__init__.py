@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 def build_app(hanflow: Any = None) -> FastAPI:
     """Build the FastAPI app. ``hanflow`` is the SDK instance (stored for DI)."""
-    app = FastAPI(title="Hanflow", version="1.0.1")
+    app = FastAPI(title="Hanflow", version="1.1.0")
     app.state.hanflow = hanflow
 
     # CORS: allow frontend dev server (localhost:3000) to call API

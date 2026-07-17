@@ -159,6 +159,7 @@ class Hanflow:
             workspace_mgr=self._workspace_mgr,
             sandbox=sandbox,
             named_models=named_models,
+            run_handle_queue=handle._queue,
         )
         try:
             compiled = Compiler(NodeExecutorRegistry.default()).compile(dsl, ctx=ctx)

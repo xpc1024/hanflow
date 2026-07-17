@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from hanflow.core.errors import HanflowError
-from hanflow.models.providers.base import ModelResponse, TokenUsage
+from hanflow.models.providers.base import ModelResponse, StreamChunk, TokenUsage
 
 
 class FakeProvider:
@@ -56,8 +56,11 @@ class FakeProvider:
             provider=self.name,
         )
 
-    async def stream(self, model: str, messages: list[Any], **kwargs: Any) -> AsyncIterator[str]:
+    async def stream(
+        self, model: str, messages: list[Any], **kwargs: Any
+    ) -> AsyncIterator[StreamChunk]:
+        """Yield StreamChunks (§design StreamChunk alignment)."""
         if self.fail_with is not None:
             raise self.fail_with
         for tok in self.stream_tokens or []:
-            yield tok
+            yield StreamChunk(delta=tok)
