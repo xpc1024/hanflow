@@ -33,7 +33,7 @@ class GLMProvider:
         return (usage.input_tokens / 1000) * in_p + (usage.output_tokens / 1000) * out_p
 
     async def complete(self, model: str, messages: list[Any], **kwargs: Any) -> ModelResponse:
-        from zhipuai import ZhipuAI  # type: ignore[import-not-found]
+        from zhipuai import ZhipuAI  # type: ignore[import-untyped]
 
         client = ZhipuAI(api_key=self.api_key)
         t0 = time.monotonic()
@@ -73,7 +73,7 @@ class GLMProvider:
         Connection-phase failures keep ``retryable=True`` (class default);
         mid-flight failures set ``retryable=False`` on the raised instance.
         """
-        from zhipuai import ZhipuAI  # type: ignore[import-not-found]
+        from zhipuai import ZhipuAI
 
         try:
             client = ZhipuAI(api_key=self.api_key)

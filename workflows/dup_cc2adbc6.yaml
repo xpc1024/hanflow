@@ -1,0 +1,6 @@
+name: dup
+nodes:
+  - id: a
+    type: LLM
+    config:
+      template: hi

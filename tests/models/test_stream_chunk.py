@@ -1,5 +1,4 @@
 """StreamChunk model tests (§design StreamChunk)."""
-import pytest
 from hanflow.models.providers.base import StreamChunk, TokenUsage
 
 
@@ -13,7 +12,13 @@ def test_stream_chunk_minimal():
 
 def test_stream_chunk_final():
     """末尾 chunk：带 usage + finish_reason。"""
-    u = TokenUsage(input_tokens=10, output_tokens=20, total_tokens=30, cost_usd=0.01, latency_ms=100.0)
+    u = TokenUsage(
+        input_tokens=10,
+        output_tokens=20,
+        total_tokens=30,
+        cost_usd=0.01,
+        latency_ms=100.0,
+    )
     c = StreamChunk(delta="", usage=u, finish_reason="stop")
     assert c.usage == u
     assert c.finish_reason == "stop"

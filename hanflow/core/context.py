@@ -131,7 +131,7 @@ class FakeContext:
 
     async def stream(self, messages: list[Any], **kwargs: Any) -> AsyncIterator[StreamChunk]:
         # FakeContext does not perform real streaming; yield nothing.
-        return  # type: ignore[return-value]
+        return
         yield  # pragma: no cover
 
     async def tool_call(self, name: str, args: dict[str, Any], *, timeout_seconds: int = 60) -> Any:

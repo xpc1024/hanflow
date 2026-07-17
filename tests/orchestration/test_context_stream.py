@@ -37,10 +37,9 @@ def _make_ctx(run_handle_queue=None):
     ``make_state`` (shared from tests/conftest.py) provides a fully-populated
     ``NexusState`` (the real model has many required fields).
     """
-    from tests.conftest import make_state
-
     from hanflow.observability.trace import NullTraceExporter
     from hanflow.orchestration.context_impl import RuntimeContextImpl
+    from tests.conftest import make_state
 
     return RuntimeContextImpl(
         state=make_state(),

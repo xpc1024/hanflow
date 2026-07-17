@@ -12,13 +12,16 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from hanflow.core.result import Chunk, HITLPayload, MemoryOp, SensitivityLevel
 from hanflow.core.state import NexusState
 from hanflow.isolation.sandbox import AgentSpec, RunSandbox, enforce_tool_whitelist
 from hanflow.models.providers.base import StreamChunk
 from hanflow.observability.trace import TraceExporter
+
+if TYPE_CHECKING:
+    from hanflow.sdk import RunEvent
 
 
 class RuntimeContextImpl:
@@ -36,7 +39,7 @@ class RuntimeContextImpl:
         workspace_mgr: Any,
         sandbox: RunSandbox,
         named_models: dict[str, tuple[str, str]] | None = None,
-        run_handle_queue: asyncio.Queue | None = None,
+        run_handle_queue: asyncio.Queue[RunEvent | None] | None = None,
     ) -> None:
         self.state = state
         self._router = router

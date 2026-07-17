@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
-from hanflow.models.providers.base import ModelResponse, TokenUsage
+from hanflow.models.providers.base import ModelResponse, StreamChunk, TokenUsage
 
 _PRICING = {
     "claude-3-5-sonnet": (0.003, 0.015),
@@ -66,6 +67,8 @@ class AnthropicProvider:
             provider=self.name,
         )
 
-    async def stream(self, model: str, messages: list[Any], **kwargs: Any):  # type: ignore[override]
+    async def stream(
+        self, model: str, messages: list[Any], **kwargs: Any
+    ) -> AsyncIterator[StreamChunk]:
         raise NotImplementedError("stream() for anthropic lands in next cycle (2026-W30+)")
         yield  # pragma: no cover — satisfy async generator signature

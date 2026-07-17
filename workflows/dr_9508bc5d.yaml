@@ -1,0 +1,6 @@
+name: dr
+nodes:
+  - id: a
+    type: LLM
+    config:
+      template: hello
