@@ -14,3 +14,8 @@ data/
 .env
 node_modules/
 .next/
+
+# Web Studio 运行时保存的测试 workflow（不应入库）
+workflows/*.yaml
+!workflows/.gitkeep
+web/web-dev.log
