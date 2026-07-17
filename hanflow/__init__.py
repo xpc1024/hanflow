@@ -11,7 +11,7 @@ from hanflow.config import HanflowConfig, load_config
 from hanflow.core.dsl import WorkflowDSL
 from hanflow.sdk import Hanflow, RunEvent, RunHandle, RunResult
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 __all__ = [
     "Hanflow",
