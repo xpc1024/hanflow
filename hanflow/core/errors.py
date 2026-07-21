@@ -110,3 +110,50 @@ class CLIError(HanflowError):
     """CLI operation error (connection failed / not found / conflict)."""
 
     code = "CLI_ERROR"
+
+
+# --- Sandbox error hierarchy (cycle 2026-W30-1.1.1: DOCKER sandbox provisioner) ---
+# 子类通过覆盖类属性 code/retryable 区分具体场景; __init__ 继承基类, 不传 code= kwarg。
+# §2.1 统一错误层级: atoms 永不吞异常, 由 orchestration 包装层捕获后记录 trace + on_error。
+
+
+class SandboxError(HanflowError):
+    """Sandbox provisioning/destroy/exec 失败的基类 (§13.6, §5.3)."""
+
+    code = "SANDBOX_ERROR"
+
+
+class SandboxProvisionFailedError(SandboxError):
+    """容器创建/启动失败, 或不支持的 sandbox mode。非 retryable (通常配置错)。"""
+
+    code = "SANDBOX_PROVISION_FAILED"
+
+
+class SandboxDestroyFailedError(SandboxError):
+    """容器销毁失败。retryable (container 可能 leak, 重试可能成功)。"""
+
+    code = "SANDBOX_DESTROY_FAILED"
+    retryable = True
+
+
+class SandboxTimeoutError(SandboxError):
+    """exec 或 provision 超时。retryable (换环境/换 daemon 可能成功)。"""
+
+    code = "SANDBOX_TIMEOUT"
+    retryable = True
+
+
+class SandboxDependencyMissingError(SandboxError):
+    """aiodocker 等依赖未安装。非 retryable (需 pip install)。"""
+
+    code = "SANDBOX_DEP_MISSING"
+
+
+class ToolWhitelistError(HanflowError):
+    """工具调用不在 sub-agent 白名单内。
+
+    顺手清理 (cycle 2026-W30-1.1.1): 原 enforce_tool_whitelist 滥用基类 HanflowError,
+    现改用专用子类, 与其它领域错误一致。
+    """
+
+    code = "TOOL_WHITELIST"
