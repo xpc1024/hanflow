@@ -171,3 +171,15 @@ def test_sandbox_contract_only_depends_on_core_and_stdlib():
         assert "hanflow.isolation" not in line, f"forbidden import: {line}"
         assert "hanflow.observability" not in line, f"forbidden import: {line}"
         assert "hanflow.runtime" not in line, f"forbidden import: {line}"
+
+
+def test_type_identity_with_isolation_reexport():
+    """isolation/sandbox.py re-exports core types — same class object."""
+    from hanflow.isolation.sandbox import (
+        RunSandbox as IsoRunSandbox,
+        SandboxMode as IsoSandboxMode,
+        SandboxResources as IsoSandboxResources,
+    )
+    assert IsoRunSandbox is RunSandbox
+    assert IsoSandboxMode is SandboxMode
+    assert IsoSandboxResources is SandboxResources

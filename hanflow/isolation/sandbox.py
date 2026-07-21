@@ -4,80 +4,67 @@ Three guarantees for every spawned sub-agent (Coordinator dispatch / Execution
 delegate / Parallel fan-out):
   1. Context isolation — independent messages; parent's context invisible.
   2. Filesystem collaboration — own subdir under the run workspace.
-  3. Run-sandbox reuse — share the per-run sandbox unless ``dedicated_sandbox``.
+  3. Run-sandbox reuse — share the per-run sandbox; ``dedicated_sandbox=True``
+     still reuses the run container and only allocates an in-container subdir
+     (per §2.5 invariant; no per-agent provisioning).
 
 Sandbox levels (per-run, NOT per-agent):
   - LOCAL     : host execution + per-run dir; bash disabled by default.
-  - DOCKER    : AioSandbox isolated container (shell/code).
-  - K8S       : provisioner service → pod.
+  - DOCKER    : AioSandbox isolated container (shell/code). Landed in cycle
+                2026-W30-1.1.1 via hanflow/isolation/docker_provisioner.py.
+  - K8S       : provisioner service → pod. Placeholder, lands in Phase 10.
   - NONE      : context isolation only (pure-LLM sub-agents).
 
-DOCKER/K8S provisioning is wired in Phase 8/10; Phase 7 ships LOCAL + NONE
-and the full isolation *contract* + spawn_agent().
-"""
+Cycle 2026-W30-1.1.1 refactor:
+  SandboxMode/SandboxResources/RunSandbox moved up to
+  ``hanflow/core/sandbox_contract.py`` (L0). This module re-exports them for
+  backward compatibility (``from hanflow.isolation.sandbox import RunSandbox``
+  still works, returns the same class object).
 
+The full isolation *contract* + ``spawn_agent()`` remain here. Provisioner
+implementations live in sibling files (``local_provisioner.py``,
+``docker_provisioner.py``) plus the ``K8sProvisioner`` placeholder at the
+bottom of this file.
+"""
 from __future__ import annotations
 
 import uuid
-from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
-from hanflow.core.errors import HanflowError
+from hanflow.core.context import FakeContext
+from hanflow.core.errors import (
+    SandboxError,
+    SandboxProvisionFailedError,
+    ToolWhitelistError,
+)
+from hanflow.core.sandbox_contract import (
+    ExecInterface,              # re-export
+    ProvisionedSandbox,         # re-export
+    RunSandbox,                 # re-export (definition moved to core)
+    SandboxMode,                # re-export
+    SandboxProvisioner,         # re-export
+    SandboxResources,           # re-export
+)
 from hanflow.observability.trace import TraceExporter
 
-
-class SandboxMode(StrEnum):
-    LOCAL = "local"
-    DOCKER = "docker"
-    K8S = "k8s"
-    NONE = "none"
-
-
-class SandboxResources(BaseModel):
-    cpu_limit: str = "2.0"
-    memory_limit_mb: int = 2048
-    timeout_seconds: int = 3600
-    disk_limit_mb: int = 5120
-    network_egress: list[str] | None = None
-
-
-class RunSandbox(BaseModel):
-    """Per-run sandbox (NOT per-agent). Aligns with DeerFlow per-task mode."""
-
-    run_id: str
-    mode: SandboxMode
-    workspace_root: Path
-    container_id: str | None = None
-    resources: SandboxResources = SandboxResources()
-    bash_enabled: bool = False
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @classmethod
-    def create(
-        cls,
-        run_id: str,
-        mode: SandboxMode,
-        workspace_mgr: Any,
-        resources: SandboxResources | None = None,
-    ) -> RunSandbox:
-        ws = workspace_mgr.workspace_for(run_id)
-        bash_enabled = False  # LOCAL default disabled; DOCKER/K8S enable later
-        container_id: str | None = None
-        if mode in (SandboxMode.DOCKER, SandboxMode.K8S):
-            # Provisioning wired in Phase 8/10; for now allocate an id placeholder.
-            container_id = f"{mode.value}-{uuid.uuid4().hex[:8]}"
-        return cls(
-            run_id=run_id,
-            mode=mode,
-            workspace_root=ws,
-            container_id=container_id,
-            resources=resources or SandboxResources(),
-            bash_enabled=bash_enabled,
-        )
+__all__ = [
+    # re-exported from core (backward compat for downstream imports)
+    "SandboxMode",
+    "SandboxResources",
+    "RunSandbox",
+    "SandboxProvisioner",
+    "ProvisionedSandbox",
+    "ExecInterface",
+    # defined here
+    "SubAgentIsolation",
+    "AgentSpec",
+    "spawn_agent",
+    "enforce_tool_whitelist",
+    "K8sProvisioner",
+]
 
 
 class SubAgentIsolation(BaseModel):
@@ -90,6 +77,8 @@ class SubAgentIsolation(BaseModel):
 
 
 class AgentSpec(BaseModel):
+    """Spec for a sub-agent to be spawned via ``spawn_agent``."""
+
     task: str
     sub_agent: str
     role: str | None = None
@@ -107,18 +96,22 @@ async def spawn_agent(
     spec: AgentSpec,
     run_sandbox: RunSandbox,
     trace: TraceExporter,
+    provisioned: ProvisionedSandbox | None = None,
 ) -> Any:
     """The single entry for sub-agent dispatch (§13.6).
 
-    1. Create an isolated context (independent messages; parent invisible).
-    2. Allocate a workspace subdir under the run workspace.
-    3. Reuse the run sandbox unless ``dedicated_sandbox``.
-    4. Apply ``tool_whitelist``.
+    Cycle 2026-W30-1.1.1: adds optional ``provisioned`` (from build_sandbox).
+    All sub-agents — ``dedicated_sandbox`` True or False — **reuse the run
+    sandbox** (§2.5 per-run invariant). DOCKER mode allocates an in-container
+    subdir via ``provisioned.exec_interface`` so sub-agent writes are visible
+    inside the container (audit round 1 severe #2 fix).
 
     Returns a RuntimeContext-shaped object (FakeContext here; Phase 8 ships the
     real RuntimeContext implementation with the same shape).
     """
-    async with trace.span("agent.spawn", kind="workflow", sub_agent=spec.sub_agent, role=spec.role):
+    async with trace.span(
+        "agent.spawn", kind="workflow", sub_agent=spec.sub_agent, role=spec.role,
+    ) as sp:  # round 1 audit cleanup: use the yielded Span
         from hanflow.core.context import FakeContext
 
         # 1. isolated state: copy meta, drop messages + per-node state
@@ -132,33 +125,93 @@ async def spawn_agent(
             }
         )
 
-        # 2. workspace subdir
-        sandbox_id = f"agent-{uuid.uuid4().hex[:8]}"
-        subdir = str(run_sandbox.workspace_root / sandbox_id)
-        run_sandbox.workspace_root.mkdir(parents=True, exist_ok=True)
-        Path(subdir).mkdir(parents=True, exist_ok=True)
+        # 2. workspace subdir.
+        # Round 1 audit severe #2 fix: DOCKER mode subdir MUST land inside
+        # provisioned.workspace_root (container view). Falling back to
+        # run_sandbox.workspace_root (host path) would put sub-agent writes
+        # outside the container's bind-mount and silently break data flow.
+        subdir_name = f"agent-{uuid.uuid4().hex[:8]}"
+        if provisioned is not None and provisioned.mode == SandboxMode.DOCKER:
+            # §2.5: reuse run container; just allocate an in-container subdir.
+            # dedicated_sandbox is honoured by *not* provisioning a new
+            # container here (only build_sandbox provisions, once per run).
+            #
+            # Container-internal paths are always POSIX (Linux); avoid Path /
+            # which on Windows host would produce backslashes ("\workspace\agent-x").
+            workspace_str = str(provisioned.workspace_root).replace("\\", "/")
+            # normalize trailing slash so we don't get "//agent-x"
+            workspace_str = workspace_str.rstrip("/")
+            subdir = f"{workspace_str}/{subdir_name}"
+            try:
+                await provisioned.exec_interface.run(
+                    command=["mkdir", "-p", subdir], timeout=5,
+                )
+            except SandboxError:
+                # propagate专用 subclass — preserves code + retryable (§5).
+                raise
+            except Exception as exc:
+                # Non-Sandbox exceptions get wrapped; Sandbox subclass errors
+                # above pass through unchanged.
+                raise SandboxProvisionFailedError(
+                    f"failed to allocate subdir in container: {exc}",
+                    run_id=run_sandbox.run_id,
+                    details={"subdir": subdir},
+                ) from exc
+        else:
+            # LOCAL/NONE (or no provisioned wired): subdir on host workspace.
+            subdir = str(run_sandbox.workspace_root / subdir_name)
+            run_sandbox.workspace_root.mkdir(parents=True, exist_ok=True)
+            Path(subdir).mkdir(parents=True, exist_ok=True)
         spec.workspace_subdir = subdir
 
-        # 3. dedicated sandbox? (Phase 8/10 provisions a real container)
-        if spec.dedicated_sandbox and spec.sandbox_mode in (
-            SandboxMode.DOCKER,
-            SandboxMode.K8S,
-        ):
-            # Placeholder: real provisioning in Phase 8/10.
-            pass
+        # 3. dedicated_sandbox: NO per-agent provisioning (§2.5). The legacy
+        # branch that *would* have provisioned per-agent is now a no-op; the
+        # in-container subdir above is the dedicated semantics.
 
         # 4. build child context with whitelist
         child = FakeContext(state=child_state)
         child._tool_whitelist = spec.tools_whitelist  # type: ignore[attr-defined]
+        await trace.event(
+            "agent.spawned", sub_agent=spec.sub_agent, span_id=sp.span_id,
+        )
         return child
 
 
 def enforce_tool_whitelist(tool_name: str, whitelist: list[str] | None) -> None:
-    """Raise if a tool call is outside the whitelist (used by Phase 8 ctx)."""
+    """Raise if a tool call is outside the whitelist (used by ctx.tool_call).
+
+    Cycle 2026-W30-1.1.1: uses专用 ``ToolWhitelistError`` instead of base
+    ``HanflowError`` (matches the rest of the error hierarchy).
+    """
     if whitelist is None:
         return
     if tool_name not in whitelist:
-        raise HanflowError(
+        raise ToolWhitelistError(
             f"tool {tool_name!r} not in sub-agent whitelist",
             details={"whitelist": whitelist},
+        )
+
+
+class K8sProvisioner:
+    """K8S sandbox provisioner placeholder (Phase 10, cycle 2026-W30-1.1.1).
+
+    Why a class instead of just letting ``SandboxMode.K8S`` raise at the
+    composition root: ``SandboxProvisioner`` is a ``@runtime_checkable``
+    Protocol and K8S is one of its declared implementations. Giving it an
+    explicit placeholder class lets ``build_sandbox`` dispatch uniformly and
+    surface a clear NotImplementedError (CHARTER §4 placeholder convention).
+    """
+
+    name = "k8s"
+
+    async def provision(self, run_sandbox: RunSandbox) -> ProvisionedSandbox:
+        raise NotImplementedError(
+            f"K8S sandbox provisioning lands in Phase 10 "
+            f"(got run_id={run_sandbox.run_id})"
+        )
+
+    async def destroy(self, provisioned: ProvisionedSandbox) -> None:
+        raise NotImplementedError(
+            f"K8S sandbox destroy lands in Phase 10 "
+            f"(got run_id={provisioned.run_id})"
         )
