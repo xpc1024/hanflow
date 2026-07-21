@@ -14,6 +14,7 @@ Timeouts are wrapped internally as ``SandboxTimeoutError`` so callers
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +25,6 @@ from hanflow.core.errors import (
     SandboxTimeoutError,
 )
 from hanflow.core.sandbox_contract import (
-    ExecInterface,
     ProvisionedSandbox,
     RunSandbox,
     SandboxMode,
@@ -204,10 +204,9 @@ class DockerProvisioner:
         client = Docker()
         try:
             container = await client.containers.get(provisioned.container_id)
-            try:
+            # already-stopped is fine: use contextlib.suppress (ruff SIM105)
+            with contextlib.suppress(DockerError):
                 await container.kill()
-            except DockerError:
-                pass  # already stopped — fine
             await container.delete()
         except DockerError as exc:
             raise SandboxDestroyFailedError(

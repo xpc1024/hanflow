@@ -9,9 +9,6 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-import pytest
-from pydantic import BaseModel
-
 from hanflow.core.sandbox_contract import (
     ExecInterface,
     ProvisionedSandbox,
@@ -177,7 +174,11 @@ def test_type_identity_with_isolation_reexport():
     """isolation/sandbox.py re-exports core types — same class object."""
     from hanflow.isolation.sandbox import (
         RunSandbox as IsoRunSandbox,
+    )
+    from hanflow.isolation.sandbox import (
         SandboxMode as IsoSandboxMode,
+    )
+    from hanflow.isolation.sandbox import (
         SandboxResources as IsoSandboxResources,
     )
     assert IsoRunSandbox is RunSandbox

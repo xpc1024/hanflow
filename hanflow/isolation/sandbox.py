@@ -34,19 +34,18 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from hanflow.core.context import FakeContext
 from hanflow.core.errors import (
     SandboxError,
     SandboxProvisionFailedError,
     ToolWhitelistError,
 )
 from hanflow.core.sandbox_contract import (
-    ExecInterface,              # re-export
-    ProvisionedSandbox,         # re-export
-    RunSandbox,                 # re-export (definition moved to core)
-    SandboxMode,                # re-export
-    SandboxProvisioner,         # re-export
-    SandboxResources,           # re-export
+    ExecInterface,  # re-export
+    ProvisionedSandbox,  # re-export
+    RunSandbox,  # re-export (definition moved to core)
+    SandboxMode,  # re-export
+    SandboxProvisioner,  # re-export
+    SandboxResources,  # re-export
 )
 from hanflow.observability.trace import TraceExporter
 

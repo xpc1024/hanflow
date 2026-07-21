@@ -14,7 +14,6 @@ from typing import Any
 
 from hanflow.core.errors import SandboxTimeoutError
 from hanflow.core.sandbox_contract import (
-    ExecInterface,
     ProvisionedSandbox,
     RunSandbox,
     SandboxMode,
