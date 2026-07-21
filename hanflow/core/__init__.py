@@ -5,6 +5,14 @@ This package re-exports the public contract surface for convenience.
 """
 
 from hanflow.core.context import FakeContext, RuntimeContext
+from hanflow.core.sandbox_contract import (
+    ExecInterface,
+    ProvisionedSandbox,
+    RunSandbox,
+    SandboxMode,
+    SandboxProvisioner,
+    SandboxResources,
+)
 from hanflow.core.errors import (
     BudgetExceededError,
     CheckpointCorruptError,
@@ -46,6 +54,13 @@ __all__ = [
     # context
     "FakeContext",
     "RuntimeContext",
+    # sandbox contract
+    "ExecInterface",
+    "ProvisionedSandbox",
+    "RunSandbox",
+    "SandboxMode",
+    "SandboxProvisioner",
+    "SandboxResources",
     # errors
     "BudgetExceededError",
     "CheckpointCorruptError",
