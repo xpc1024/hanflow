@@ -73,14 +73,17 @@ class LocalProvisioner:
     name = "local"
 
     async def provision(self, run_sandbox: RunSandbox) -> ProvisionedSandbox:
-        if run_sandbox.mode != SandboxMode.LOCAL:
+        # LOCAL and NONE both use host execution; the difference (context
+        # isolation) is enforced elsewhere, not by the provisioner.
+        if run_sandbox.mode not in (SandboxMode.LOCAL, SandboxMode.NONE):
             # Programmer error: build_sandbox should dispatch by mode.
             raise ValueError(
-                f"LocalProvisioner requires SandboxMode.LOCAL, got {run_sandbox.mode!r}"
+                f"LocalProvisioner requires SandboxMode.LOCAL or NONE, "
+                f"got {run_sandbox.mode!r}"
             )
         return ProvisionedSandbox(
             run_id=run_sandbox.run_id,
-            mode=SandboxMode.LOCAL,
+            mode=run_sandbox.mode,  # preserve user-requested mode in provisioned artifact
             container_id=None,
             exec_interface=_LocalExec(run_sandbox.workspace_root, run_sandbox.run_id),
             workspace_root=run_sandbox.workspace_root,

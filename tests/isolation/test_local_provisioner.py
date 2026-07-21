@@ -39,11 +39,22 @@ async def test_local_provisioner_provision_returns_provisioned_sandbox():
 
 @pytest.mark.asyncio
 async def test_local_provisioner_provision_wrong_mode_raises_value_error():
-    """Wrong-mode is a programmer error → stdlib ValueError (not §2.1 territory)."""
+    """Wrong-mode (DOCKER) is a programmer error → stdlib ValueError."""
     sb = RunSandbox.create("r1", SandboxMode.DOCKER, _FakeMgr())
     p = LocalProvisioner()
     with pytest.raises(ValueError, match="LocalProvisioner"):
         await p.provision(sb)
+
+
+@pytest.mark.asyncio
+async def test_local_provisioner_accepts_none_mode():
+    """NONE mode also uses LocalProvisioner (host exec; context isolation elsewhere)."""
+    sb = RunSandbox.create("r1", SandboxMode.NONE, _FakeMgr())
+    p = LocalProvisioner()
+    provisioned = await p.provision(sb)
+    assert provisioned.mode == SandboxMode.NONE
+    assert provisioned.container_id is None
+    assert isinstance(provisioned.exec_interface, _LocalExec)
 
 
 @pytest.mark.asyncio
