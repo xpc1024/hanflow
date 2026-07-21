@@ -38,6 +38,24 @@ class BudgetConfig(BaseModel):
 
 class PrivacyConfigSection(BaseModel):
     local_providers: list[str] = []
+
+
+class IsolationDockerConfig(BaseModel):
+    """DOCKER-mode sandbox settings (cycle 2026-W30-1.1.1).
+
+    Only ``base_image`` is honored in this cycle; ``pull_policy`` is reserved
+    for a future cycle (we use whatever image is already present locally).
+    """
+
+    base_image: str = "python:3.11-slim"
+    pull_policy: str = "if_not_present"  # reserved; not yet implemented
+
+
+class IsolationConfig(BaseModel):
+    """Sandbox isolation settings. Default mode=local preserves old behaviour."""
+
+    mode: str = "local"  # local | docker | k8s | none
+    docker: IsolationDockerConfig = IsolationDockerConfig()
     enforce: str = "hard"
     audit: bool = True
 
@@ -81,6 +99,7 @@ class HanflowConfig(BaseModel):
     workspace: dict[str, Any] = {}
     workflows: dict[str, Any] = {}
     server: ServerConfig = ServerConfig()
+    isolation: IsolationConfig = IsolationConfig()  # cycle 2026-W30-1.1.1
 
 
 def _resolve_placeholders(value: Any) -> Any:

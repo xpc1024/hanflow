@@ -20,7 +20,13 @@ from hanflow.core.errors import (
     NodeExecutionError,
     PrivacyViolationError,
     RateLimitError,
+    SandboxDependencyMissingError,
+    SandboxDestroyFailedError,
+    SandboxError,
+    SandboxProvisionFailedError,
+    SandboxTimeoutError,
     ToolTimeoutError,
+    ToolWhitelistError,
 )
 from hanflow.core.result import (
     Artifact,
@@ -35,11 +41,26 @@ from hanflow.core.result import (
     Source,
     TraceEvent,
 )
+from hanflow.core.sandbox_contract import (
+    ExecInterface,
+    ProvisionedSandbox,
+    RunSandbox,
+    SandboxMode,
+    SandboxProvisioner,
+    SandboxResources,
+)
 
 __all__ = [
     # context
     "FakeContext",
     "RuntimeContext",
+    # sandbox contract
+    "ExecInterface",
+    "ProvisionedSandbox",
+    "RunSandbox",
+    "SandboxMode",
+    "SandboxProvisioner",
+    "SandboxResources",
     # errors
     "BudgetExceededError",
     "CheckpointCorruptError",
@@ -55,7 +76,13 @@ __all__ = [
     "NodeExecutionError",
     "PrivacyViolationError",
     "RateLimitError",
+    "SandboxDependencyMissingError",
+    "SandboxDestroyFailedError",
+    "SandboxError",
+    "SandboxProvisionFailedError",
+    "SandboxTimeoutError",
     "ToolTimeoutError",
+    "ToolWhitelistError",
     # result
     "Artifact",
     "AtomResult",

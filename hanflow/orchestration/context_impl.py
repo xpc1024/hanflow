@@ -38,6 +38,7 @@ class RuntimeContextImpl:
         trace: TraceExporter,
         workspace_mgr: Any,
         sandbox: RunSandbox,
+        provisioned: Any | None = None,
         named_models: dict[str, tuple[str, str]] | None = None,
         run_handle_queue: asyncio.Queue[RunEvent | None] | None = None,
     ) -> None:
@@ -50,6 +51,11 @@ class RuntimeContextImpl:
         self.trace = trace
         self._workspace_mgr = workspace_mgr
         self._sandbox = sandbox
+        # cycle 2026-W30-1.1.1: provisioned sandbox handle (container/subprocess
+        # + ExecInterface). Optional for backward compat; DOCKER mode requires it.
+        # Typed Any because ProvisionedSandbox lives in core.sandbox_contract
+        # but we already import RunSandbox transitively; avoid extra import here.
+        self._provisioned = provisioned
         self._tool_whitelist: list[str] | None = None
         # named_models: {"strong": ("openai","gpt-4o"), ...} from config (§4.7).
         # Used to resolve PUBLIC prefer="strong" → ("openai","gpt-4o") tuple.
@@ -58,6 +64,14 @@ class RuntimeContextImpl:
         # pushes RunEvents (llm_token / node_*) so the host can stream them to
         # the SDK caller. None for sub-agents / isolated tests → silent drop.
         self._run_handle_queue = run_handle_queue
+
+    def provisioned(self) -> Any | None:
+        """Access the provisioned sandbox handle (container + exec interface).
+
+        Used by builtin tools (code_exec / shell) to reach the ExecInterface.
+        Returns None when no provisioner was wired (e.g. legacy test contexts).
+        """
+        return self._provisioned
 
     # --- GraphRuntime ------------------------------------------------------
     def emit_hitl(self, payload: HITLPayload) -> None:

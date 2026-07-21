@@ -120,17 +120,22 @@ class Hanflow:
         handle = RunHandle(run_id=run_id, status="running")
 
         await self._ensure_components()
+        from hanflow.core.sandbox_contract import SandboxMode
         from hanflow.core.state import NexusState, RunMeta
-        from hanflow.isolation.sandbox import RunSandbox, SandboxMode
         from hanflow.orchestration.compiler import Compiler
         from hanflow.orchestration.context_impl import RuntimeContextImpl
         from hanflow.orchestration.registry import NodeExecutorRegistry
+        from hanflow.runtime.build_sandbox import build_sandbox
 
         named_models = self._build_named_models()
-        sandbox = RunSandbox.create(
+        # cycle 2026-W30-1.1.1: dispatch via build_sandbox composition root.
+        # Default mode=local preserves the previous hard-coded behaviour.
+        iso_cfg = self.config.isolation
+        sandbox, provisioned = await build_sandbox(
             run_id=run_id,
-            mode=SandboxMode.LOCAL,
+            mode=SandboxMode(iso_cfg.mode),
             workspace_mgr=self._workspace_mgr,
+            docker_image=iso_cfg.docker.base_image,
         )
         state = NexusState(
             meta=RunMeta(
@@ -158,6 +163,7 @@ class Hanflow:
             trace=self._trace,
             workspace_mgr=self._workspace_mgr,
             sandbox=sandbox,
+            provisioned=provisioned,
             named_models=named_models,
             run_handle_queue=handle._queue,
         )

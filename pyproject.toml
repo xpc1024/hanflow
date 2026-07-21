@@ -1,6 +1,6 @@
 [project]
 name = "hanflow"
-version = "1.1.0"
+version = "1.2.0"
 description = "Hanflow — Harmony AI Nexus: a high-control agent framework on LangGraph."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -43,7 +43,8 @@ glm = ["zhipuai>=2.0"]
 deepseek = ["openai>=1.30"]  # deepseek uses openai-compatible API
 ollama = ["ollama>=0.3"]
 vllm = []  # vllm uses openai-compatible API; no extra needed
-all = ["hanflow[langsmith,otel,postgres,redis,s3,openai,anthropic,glm,deepseek,ollama]"]
+docker = ["aiodocker>=0.23"]  # DOCKER sandbox isolation (cycle 2026-W30-1.1.1)
+all = ["hanflow[langsmith,otel,postgres,redis,s3,openai,anthropic,glm,deepseek,ollama,docker]"]
 
 [project.scripts]
 hanflow = "hanflow.cli.main:main"
