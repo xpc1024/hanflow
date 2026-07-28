@@ -79,3 +79,16 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.ruff.lint.per-file-ignores]
 "hanflow/cli/main.py" = ["B008"]  # typer.Option in defaults is the documented pattern
+
+[tool.coverage.run]
+source = ["hanflow"]
+branch = true
+omit = [
+    "hanflow/observability/providers/*",  # 需外部 backend (langsmith/otel)
+    "hanflow/cli/main.py",                # typer 命令调度,非业务
+    "*/__init__.py",                      # 空包标记
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
