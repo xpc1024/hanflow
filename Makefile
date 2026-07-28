@@ -1,4 +1,4 @@
-.PHONY: install test test-unit lint typecheck ci
+.PHONY: install test test-unit test-cov lint typecheck ci
 
 install:
 	uv sync --all-extras
@@ -8,6 +8,10 @@ test:
 
 test-unit:
 	uv run pytest tests/ -m "not integration"
+
+test-cov:
+	uv run pytest --cov=hanflow --cov-report=term-missing --cov-report=html
+	@echo "HTML report: htmlcov/index.html"
 
 lint:
 	uv run ruff check .
