@@ -1,8 +1,11 @@
+import importlib.util
 from unittest.mock import MagicMock
 
 import pytest
 
 from hanflow.observability.providers.otel import OTelTraceExporter
+
+_OTEL_AVAILABLE = importlib.util.find_spec("opentelemetry") is not None
 
 
 def _make_tracer():
@@ -44,6 +47,10 @@ async def test_otel_records_error_on_exception():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    not _OTEL_AVAILABLE,
+    reason="requires otel extra (uv sync --extra otel)",
+)
 async def test_otel_from_config_builds_tracer():
     exp = OTelTraceExporter.from_config({"backend": "otel", "service_name": "hanflow"})
     assert exp.tracer is not None

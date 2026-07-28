@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
 
 import hanflow
 from hanflow import Hanflow, HanflowConfig, WorkflowDSL
+
+_PYPROJECT = Path(__file__).resolve().parent.parent / "pyproject.toml"
 
 
 def test_v0_all_subsystems_importable():
@@ -27,7 +30,10 @@ def test_v0_all_subsystems_importable():
     import hanflow.sdk  # noqa: F401
     import hanflow.tools  # noqa: F401
 
-    assert hanflow.__version__ == "0.1.0"
+    # 版本断言从 pyproject.toml 动态读, 避免每次 release bump 后测试失效
+    with open(_PYPROJECT, "rb") as fh:
+        expected = tomllib.load(fh)["project"]["version"]
+    assert hanflow.__version__ == expected
 
 
 def test_top_level_api_exports():
