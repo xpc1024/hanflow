@@ -6,7 +6,7 @@
 - **生成时间**: 2026-07-28
 - **pytest-cov 版本**: 7.1.0
 - **pytest 版本**: 9.1.1
-- **coverage.py 版本**: 7.15.2
+- **coverage.py 版本**: 7.15.2(pytest-cov 的传递依赖,非项目直接依赖)
 - **测量命令**: `make test-cov`(等价 `uv run pytest --cov=hanflow --cov-report=term-missing --cov-report=html`)
 - **测试结果**: 323 passed, 1 skipped(integration, 需 `HANFLOW_INTEGRATION=1`), 3 failed(**pre-existing**,与本贡献无关,见下文)
 
