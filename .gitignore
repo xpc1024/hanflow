@@ -4,6 +4,8 @@ __pycache__/
 .uv/
 *.egg-info/
 .pytest_cache/
+.coverage
+htmlcov/
 .mypy_cache/
 .ruff_cache/
 dist/
@@ -14,3 +16,6 @@ data/
 .env
 node_modules/
 .next/
+
+# contribute-pr skill 本地状态(不入库)
+.contribute/
