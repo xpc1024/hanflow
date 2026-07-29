@@ -3,10 +3,19 @@
 Mocks the SDK class itself (``openai.AsyncOpenAI`` / ``zhipuai.ZhipuAI``)
 because each provider constructs a fresh client per call via a delayed
 function-local import — patching ``self._client`` is not possible.
+
+For anthropic / ollama the optional SDK is typically not installed, so
+``patch("anthropic.AsyncAnthropic")`` itself would raise ``ModuleNotFoundError``
+when mock resolves the target (same root cause that currently breaks the glm
+tests). We instead inject a fake SDK module into ``sys.modules`` before
+importing the provider, which exercises the real ``stream()`` parsing logic
+without the SDK installed.
 """
 
 import importlib
 import inspect
+import sys
+import types
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -190,3 +199,132 @@ def test_vllm_inherits_openai_stream_and_routes_base_url():
     provider = VLLMProvider()
     assert type(provider).stream is OpenAIProvider.stream
     assert provider.base_url == "http://localhost:8000/v1"
+
+
+# --- ollama: stream() implemented (dict-based async iterator) ---
+# Optional `ollama` SDK may be absent; inject a fake module into sys.modules so
+# the provider's delayed `import ollama` resolves to our stub without installing.
+
+
+class _FakeOllamaClient:
+    """Mimics ollama.AsyncClient.chat(stream=True) returning an async iterator."""
+
+    def __init__(self, chunks, *, connect_error=None, midflight_after=None):
+        self._chunks = chunks
+        self._connect_error = connect_error
+        self._midflight_after = midflight_after
+
+    async def chat(self, *args, **kwargs):
+        if self._connect_error is not None:
+            raise self._connect_error
+
+        chunks = list(self._chunks)
+        midflight_after = self._midflight_after
+
+        class _Iter:
+            def __init__(self, items):
+                self._items = items
+                self._i = 0
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if midflight_after is not None and self._i == midflight_after:
+                    raise Exception("server dropped connection")
+                if self._i >= len(self._items):
+                    raise StopAsyncIteration
+                item = self._items[self._i]
+                self._i += 1
+                return item
+
+        return _Iter(chunks)
+
+
+def _install_fake_ollama(client):
+    """Register a fake `ollama` module whose AsyncClient() returns `client`."""
+    fake = types.ModuleType("ollama")
+
+    class _AsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        # tests set .chat via attribute on the instance? No — client is created
+        # fresh each call. Instead store the per-test client factory.
+
+    # Simpler: AsyncClient is a callable returning our prebuilt client.
+    fake.AsyncClient = lambda *a, **kw: client
+    sys.modules["ollama"] = fake
+
+
+@pytest.fixture
+def ollama_module_clean():
+    """Remove cached provider + ollama modules so each test re-imports fresh."""
+    for mod in list(sys.modules):
+        if mod == "ollama" or mod.endswith("models.providers.ollama"):
+            sys.modules.pop(mod, None)
+    yield
+    sys.modules.pop("ollama", None)
+    sys.modules.pop("hanflow.models.providers.ollama", None)
+
+
+@pytest.mark.asyncio
+async def test_ollama_stream_parses_chunks(ollama_module_clean):
+    chunks = [
+        {"message": {"content": "hel"}, "done": False},
+        {"message": {"content": "lo"}, "done": True, "done_reason": "stop",
+         "prompt_eval_count": 5, "eval_count": 2},
+    ]
+    _install_fake_ollama(_FakeOllamaClient(chunks))
+
+    from hanflow.models.providers.ollama import OllamaProvider
+
+    provider = OllamaProvider()
+    out = [c async for c in provider.stream("qwen2.5:7b", [{"role": "user", "content": "hi"}])]
+    assert "".join(c.delta for c in out) == "hello"
+    assert out[-1].finish_reason == "stop"
+
+
+@pytest.mark.asyncio
+async def test_ollama_stream_includes_usage(ollama_module_clean):
+    chunks = [
+        {"message": {"content": "hi"}, "done": False},
+        {"message": {"content": ""}, "done": True, "done_reason": "stop",
+         "prompt_eval_count": 10, "eval_count": 4},
+    ]
+    _install_fake_ollama(_FakeOllamaClient(chunks))
+
+    from hanflow.models.providers.ollama import OllamaProvider
+
+    provider = OllamaProvider()
+    out = [c async for c in provider.stream("qwen2.5:7b", [])]
+    usage_chunk = next(c for c in out if c.usage is not None)
+    assert usage_chunk.usage.input_tokens == 10
+    assert usage_chunk.usage.output_tokens == 4
+    assert usage_chunk.usage.total_tokens == 14
+
+
+@pytest.mark.asyncio
+async def test_ollama_stream_wraps_connection_error(ollama_module_clean):
+    _install_fake_ollama(_FakeOllamaClient([], connect_error=Exception("connect refused")))
+
+    from hanflow.models.providers.ollama import OllamaProvider
+
+    provider = OllamaProvider()
+    with pytest.raises(ModelTimeoutError) as exc_info:
+        _ = [c async for c in provider.stream("qwen2.5:7b", [])]
+    assert exc_info.value.retryable is True  # connection failure is retryable
+
+
+@pytest.mark.asyncio
+async def test_ollama_stream_midflight_error_not_retryable(ollama_module_clean):
+    chunks = [{"message": {"content": "partial"}, "done": False}]
+    # fail after yielding 1 chunk
+    _install_fake_ollama(_FakeOllamaClient(chunks, midflight_after=1))
+
+    from hanflow.models.providers.ollama import OllamaProvider
+
+    provider = OllamaProvider()
+    with pytest.raises(ModelTimeoutError) as exc_info:
+        _ = [c async for c in provider.stream("qwen2.5:7b", [])]
+    assert exc_info.value.retryable is False  # mid-flight failure not retryable
