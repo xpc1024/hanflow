@@ -10,6 +10,7 @@ Composition root status (CHARTER §3): this module is allowed to import
 concrete provisioners from L4 ``hanflow/isolation/`` because it is the layer
 that assembles the runtime. Business logic never reaches down through here.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -54,24 +55,30 @@ async def build_sandbox(
         NotImplementedError: K8S mode (Phase 10 placeholder).
     """
     sb = RunSandbox.create(
-        run_id=run_id, mode=mode,
-        workspace_mgr=workspace_mgr, resources=resources,
+        run_id=run_id,
+        mode=mode,
+        workspace_mgr=workspace_mgr,
+        resources=resources,
     )
 
     provisioner: SandboxProvisioner
     if mode == SandboxMode.LOCAL:
         from hanflow.isolation.local_provisioner import LocalProvisioner
+
         provisioner = LocalProvisioner()
     elif mode == SandboxMode.NONE:
         # NONE: context-only isolation, but execution still needs a host path.
         # Reuse LocalProvisioner (no container, host exec).
         from hanflow.isolation.local_provisioner import LocalProvisioner
+
         provisioner = LocalProvisioner()
     elif mode == SandboxMode.DOCKER:
         from hanflow.isolation.docker_provisioner import DockerProvisioner
+
         provisioner = DockerProvisioner(base_image=docker_image)
     elif mode == SandboxMode.K8S:
         from hanflow.isolation.sandbox import K8sProvisioner
+
         provisioner = K8sProvisioner()
     else:  # exhaustive due to SandboxMode StrEnum, but mypy/defensive
         raise SandboxProvisionFailedError(

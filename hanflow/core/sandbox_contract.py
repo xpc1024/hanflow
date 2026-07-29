@@ -18,6 +18,7 @@ composition root ``hanflow/runtime/build_sandbox.py`` injects the chosen
 provisioner. ``spawn_agent`` / ``RuntimeContextImpl`` consume the contract via
 the Protocol — they never import concrete provisioner classes.
 """
+
 from __future__ import annotations
 
 from enum import StrEnum
@@ -30,10 +31,10 @@ from pydantic import BaseModel, ConfigDict
 class SandboxMode(StrEnum):
     """Sandbox isolation level (per-run, NOT per-agent — §2.5)."""
 
-    LOCAL = "local"      # host execution + per-run dir; bash disabled by default
-    DOCKER = "docker"    # AioSandbox isolated container (cycle 2026-W30-1.1.1)
-    K8S = "k8s"          # provisioner service → pod (Phase 10, placeholder)
-    NONE = "none"        # context isolation only (pure-LLM sub-agents)
+    LOCAL = "local"  # host execution + per-run dir; bash disabled by default
+    DOCKER = "docker"  # AioSandbox isolated container (cycle 2026-W30-1.1.1)
+    K8S = "k8s"  # provisioner service → pod (Phase 10, placeholder)
+    NONE = "none"  # context isolation only (pure-LLM sub-agents)
 
 
 class SandboxResources(BaseModel):
@@ -149,9 +150,9 @@ class ProvisionedSandbox(BaseModel):
 
     run_id: str
     mode: SandboxMode
-    container_id: str | None = None      # None for LOCAL/NONE; required for DOCKER/K8S
-    exec_interface: Any                  # implements ExecInterface (see Protocol above)
-    workspace_root: Path                 # bind mount or host path
+    container_id: str | None = None  # None for LOCAL/NONE; required for DOCKER/K8S
+    exec_interface: Any  # implements ExecInterface (see Protocol above)
+    workspace_root: Path  # bind mount or host path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 

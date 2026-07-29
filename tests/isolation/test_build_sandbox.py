@@ -4,6 +4,7 @@ Verifies that build_sandbox dispatches to the right provisioner per mode and
 returns a (RunSandbox, ProvisionedSandbox) tuple. K8S dispatch raises
 NotImplementedError (placeholder for Phase 10).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -27,7 +28,9 @@ class _FakeMgr:
 @pytest.mark.asyncio
 async def test_build_sandbox_local_returns_both():
     sb, provisioned = await build_sandbox(
-        run_id="r1", mode=SandboxMode.LOCAL, workspace_mgr=_FakeMgr(),
+        run_id="r1",
+        mode=SandboxMode.LOCAL,
+        workspace_mgr=_FakeMgr(),
     )
     assert isinstance(sb, RunSandbox)
     assert isinstance(provisioned, ProvisionedSandbox)
@@ -39,7 +42,9 @@ async def test_build_sandbox_local_returns_both():
 async def test_build_sandbox_none_reuses_local_provisioner():
     """NONE mode reuses LocalProvisioner (context isolation handled elsewhere)."""
     sb, provisioned = await build_sandbox(
-        run_id="r1", mode=SandboxMode.NONE, workspace_mgr=_FakeMgr(),
+        run_id="r1",
+        mode=SandboxMode.NONE,
+        workspace_mgr=_FakeMgr(),
     )
     assert provisioned.container_id is None
     assert sb.mode == SandboxMode.NONE
@@ -50,7 +55,9 @@ async def test_build_sandbox_k8s_raises_not_implemented():
     """K8S mode raises NotImplementedError (Phase 10 placeholder)."""
     with pytest.raises(NotImplementedError, match="Phase 10"):
         await build_sandbox(
-            run_id="r1", mode=SandboxMode.K8S, workspace_mgr=_FakeMgr(),
+            run_id="r1",
+            mode=SandboxMode.K8S,
+            workspace_mgr=_FakeMgr(),
         )
 
 
@@ -70,7 +77,9 @@ async def test_build_sandbox_docker_with_fake_provisioner(monkeypatch):
         async def provision(self, sb: RunSandbox) -> ProvisionedSandbox:
             captured["provisioned_run_id"] = sb.run_id
             return ProvisionedSandbox(
-                run_id=sb.run_id, mode=SandboxMode.DOCKER, container_id="fake-cid",
+                run_id=sb.run_id,
+                mode=SandboxMode.DOCKER,
+                container_id="fake-cid",
                 exec_interface=object(),  # tests only care about dispatch
                 workspace_root=Path("/workspace"),
             )
@@ -81,7 +90,9 @@ async def test_build_sandbox_docker_with_fake_provisioner(monkeypatch):
     monkeypatch.setattr(dp_mod, "DockerProvisioner", _FakeDocker)
 
     sb, provisioned = await build_sandbox(
-        run_id="r1", mode=SandboxMode.DOCKER, workspace_mgr=_FakeMgr(),
+        run_id="r1",
+        mode=SandboxMode.DOCKER,
+        workspace_mgr=_FakeMgr(),
         docker_image="python:3.12-slim",
     )
     assert provisioned.container_id == "fake-cid"
@@ -105,8 +116,11 @@ async def test_build_sandbox_docker_default_image(monkeypatch):
 
         async def provision(self, sb: RunSandbox) -> ProvisionedSandbox:
             return ProvisionedSandbox(
-                run_id=sb.run_id, mode=SandboxMode.DOCKER, container_id="x",
-                exec_interface=None, workspace_root=Path("/workspace"),
+                run_id=sb.run_id,
+                mode=SandboxMode.DOCKER,
+                container_id="x",
+                exec_interface=None,
+                workspace_root=Path("/workspace"),
             )
 
         async def destroy(self, p: ProvisionedSandbox) -> None:
@@ -115,7 +129,9 @@ async def test_build_sandbox_docker_default_image(monkeypatch):
     monkeypatch.setattr(dp_mod, "DockerProvisioner", _FakeDocker)
 
     await build_sandbox(
-        run_id="r1", mode=SandboxMode.DOCKER, workspace_mgr=_FakeMgr(),
+        run_id="r1",
+        mode=SandboxMode.DOCKER,
+        workspace_mgr=_FakeMgr(),
     )
     assert captured["base_image"] == "python:3.11-slim"
 
@@ -124,6 +140,8 @@ async def test_build_sandbox_docker_default_image(monkeypatch):
 async def test_build_sandbox_returns_workspace_root_set():
     """RunSandbox.workspace_root comes from workspace_mgr.workspace_for."""
     sb, _ = await build_sandbox(
-        run_id="r42", mode=SandboxMode.LOCAL, workspace_mgr=_FakeMgr(),
+        run_id="r42",
+        mode=SandboxMode.LOCAL,
+        workspace_mgr=_FakeMgr(),
     )
     assert sb.workspace_root == Path("/tmp/r42")

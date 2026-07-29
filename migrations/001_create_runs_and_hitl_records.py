@@ -3,6 +3,7 @@
 This is a standalone SQL migration (not alembic-managed yet).
 Run manually: psql -f this_file  OR  python -m hanflow.persistence.migrate
 """
+
 from __future__ import annotations
 
 RUNS_TABLE = """

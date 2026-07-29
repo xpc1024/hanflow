@@ -10,6 +10,7 @@ Verifies three things:
      exceptions get wrapped as SandboxProvisionFailedError. This enforces
      §5 "no exception swallowing" + §2.1 unified error hierarchy.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -45,19 +46,29 @@ class _FakeExec:
 def _state(run_id: str = "r1") -> NexusState:
     return NexusState(
         meta=RunMeta(
-            run_id=run_id, workflow_name="w", workflow_version="0.1.0",
-            started_at=datetime.now(UTC), mode="dynamic", trigger="api",
+            run_id=run_id,
+            workflow_name="w",
+            workflow_version="0.1.0",
+            started_at=datetime.now(UTC),
+            mode="dynamic",
+            trigger="api",
         ),
-        inputs={}, outputs={}, node_states={}, artifacts=[], memory_ops=[], variables={},
+        inputs={},
+        outputs={},
+        node_states={},
+        artifacts=[],
+        memory_ops=[],
+        variables={},
     )
 
 
-def _make_provisioned(mode: SandboxMode, fail_with: BaseException | None = None) -> tuple[
-    ProvisionedSandbox, _FakeExec
-]:
+def _make_provisioned(
+    mode: SandboxMode, fail_with: BaseException | None = None
+) -> tuple[ProvisionedSandbox, _FakeExec]:
     exec_ = _FakeExec(fail_with)
     ps = ProvisionedSandbox(
-        run_id="r1", mode=mode,
+        run_id="r1",
+        mode=mode,
         container_id="c1" if mode == SandboxMode.DOCKER else None,
         exec_interface=exec_,
         workspace_root=Path("/workspace"),
@@ -74,15 +85,20 @@ async def test_dedicated_true_docker_mkdir_in_container(workspace_mgr, trace):
     """
     parent = FakeContext(state=_state())
     spec = AgentSpec(
-        task="x", sub_agent="a",
-        dedicated_sandbox=True, sandbox_mode=SandboxMode.DOCKER,
+        task="x",
+        sub_agent="a",
+        dedicated_sandbox=True,
+        sandbox_mode=SandboxMode.DOCKER,
     )
     run_sb = RunSandbox.create("r1", SandboxMode.DOCKER, workspace_mgr)
     provisioned, fake_exec = _make_provisioned(SandboxMode.DOCKER)
 
     await spawn_agent(
-        parent=parent, spec=spec, run_sandbox=run_sb,
-        trace=trace, provisioned=provisioned,
+        parent=parent,
+        spec=spec,
+        run_sandbox=run_sb,
+        trace=trace,
+        provisioned=provisioned,
     )
 
     # mkdir 在 run container 内被调一次(分配 subdir)
@@ -109,8 +125,11 @@ async def test_dedicated_false_docker_subdir_also_in_container(workspace_mgr, tr
     provisioned, fake_exec = _make_provisioned(SandboxMode.DOCKER)
 
     await spawn_agent(
-        parent=parent, spec=spec, run_sandbox=run_sb,
-        trace=trace, provisioned=provisioned,
+        parent=parent,
+        spec=spec,
+        run_sandbox=run_sb,
+        trace=trace,
+        provisioned=provisioned,
     )
 
     assert spec.workspace_subdir is not None
@@ -129,16 +148,21 @@ async def test_dedicated_true_docker_no_new_container_provisioned(workspace_mgr,
     """
     parent = FakeContext(state=_state())
     spec = AgentSpec(
-        task="x", sub_agent="a",
-        dedicated_sandbox=True, sandbox_mode=SandboxMode.DOCKER,
+        task="x",
+        sub_agent="a",
+        dedicated_sandbox=True,
+        sandbox_mode=SandboxMode.DOCKER,
     )
     run_sb = RunSandbox.create("r1", SandboxMode.DOCKER, workspace_mgr)
     provisioned, fake_exec = _make_provisioned(SandboxMode.DOCKER)
     original_container_id = provisioned.container_id
 
     await spawn_agent(
-        parent=parent, spec=spec, run_sandbox=run_sb,
-        trace=trace, provisioned=provisioned,
+        parent=parent,
+        spec=spec,
+        run_sandbox=run_sb,
+        trace=trace,
+        provisioned=provisioned,
     )
 
     # container_id 没变(没新 provision)
@@ -153,8 +177,11 @@ async def test_local_mode_subdir_on_host(workspace_mgr, trace):
     run_sb = RunSandbox.create("r1", SandboxMode.LOCAL, workspace_mgr)
 
     await spawn_agent(
-        parent=parent, spec=spec, run_sandbox=run_sb,
-        trace=trace, provisioned=None,
+        parent=parent,
+        spec=spec,
+        run_sandbox=run_sb,
+        trace=trace,
+        provisioned=None,
     )
 
     assert spec.workspace_subdir is not None
@@ -174,18 +201,24 @@ async def test_sandbox_error_subclass_propagates(workspace_mgr, trace):
     """
     parent = FakeContext(state=_state())
     spec = AgentSpec(
-        task="x", sub_agent="a",
-        dedicated_sandbox=True, sandbox_mode=SandboxMode.DOCKER,
+        task="x",
+        sub_agent="a",
+        dedicated_sandbox=True,
+        sandbox_mode=SandboxMode.DOCKER,
     )
     run_sb = RunSandbox.create("r1", SandboxMode.DOCKER, workspace_mgr)
     provisioned, _ = _make_provisioned(
-        SandboxMode.DOCKER, fail_with=SandboxTimeoutError("timeout", run_id="r1"),
+        SandboxMode.DOCKER,
+        fail_with=SandboxTimeoutError("timeout", run_id="r1"),
     )
 
     with pytest.raises(SandboxTimeoutError) as exc_info:
         await spawn_agent(
-            parent=parent, spec=spec, run_sandbox=run_sb,
-            trace=trace, provisioned=provisioned,
+            parent=parent,
+            spec=spec,
+            run_sandbox=run_sb,
+            trace=trace,
+            provisioned=provisioned,
         )
 
     # code + retryable 保留(没被吞)
@@ -201,18 +234,24 @@ async def test_non_sandbox_exception_wrapped_as_provision_failed(workspace_mgr, 
     """
     parent = FakeContext(state=_state())
     spec = AgentSpec(
-        task="x", sub_agent="a",
-        dedicated_sandbox=True, sandbox_mode=SandboxMode.DOCKER,
+        task="x",
+        sub_agent="a",
+        dedicated_sandbox=True,
+        sandbox_mode=SandboxMode.DOCKER,
     )
     run_sb = RunSandbox.create("r1", SandboxMode.DOCKER, workspace_mgr)
     provisioned, _ = _make_provisioned(
-        SandboxMode.DOCKER, fail_with=RuntimeError("docker daemon gone"),
+        SandboxMode.DOCKER,
+        fail_with=RuntimeError("docker daemon gone"),
     )
 
     with pytest.raises(SandboxProvisionFailedError) as exc_info:
         await spawn_agent(
-            parent=parent, spec=spec, run_sandbox=run_sb,
-            trace=trace, provisioned=provisioned,
+            parent=parent,
+            spec=spec,
+            run_sandbox=run_sb,
+            trace=trace,
+            provisioned=provisioned,
         )
 
     assert exc_info.value.code == "SANDBOX_PROVISION_FAILED"

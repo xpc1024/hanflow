@@ -3,6 +3,7 @@
 K8sProvisioner is a placeholder (Phase 10); both provision and destroy raise
 NotImplementedError per CHARTER §4 placeholder convention.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,9 +34,11 @@ async def test_k8s_provisioner_provision_raises_not_implemented():
 @pytest.mark.asyncio
 async def test_k8s_provisioner_destroy_raises_not_implemented():
     p = K8sProvisioner()
+
     # destroy stub raises before reading its arg, so we can pass a minimal stub
     class _FakeProvisioned:
         run_id = "r1"
+
     with pytest.raises(NotImplementedError, match="Phase 10"):
         await p.destroy(_FakeProvisioned())  # type: ignore[arg-type]
 

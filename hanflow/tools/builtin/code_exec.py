@@ -6,6 +6,7 @@ old host-subprocess behaviour for backward compat. ``mode="docker"`` without
 an injected ``exec_interface`` fails fast with a Phase-8-aligned message
 (was Phase 7 before this cycle).
 """
+
 from __future__ import annotations
 
 import asyncio

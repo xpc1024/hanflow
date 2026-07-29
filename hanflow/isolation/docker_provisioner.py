@@ -11,12 +11,13 @@ module-load failure.
 Timeouts are wrapped internally as ``SandboxTimeoutError`` so callers
 (``code_exec`` etc.) never see bare ``TimeoutError`` (§5 no-swallow).
 """
+
 from __future__ import annotations
 
 import asyncio
 import contextlib
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from hanflow.core.errors import (
     SandboxDependencyMissingError,
@@ -31,8 +32,24 @@ from hanflow.core.sandbox_contract import (
     SandboxResources,
 )
 
+if TYPE_CHECKING:
+    # aiodocker ships no py.typed marker / stubs; declare minimal runtime
+    # shapes so type-checking sees the symbols used below. The real import is
+    # lazy (see ``_import_aiodocker``) because aiodocker is an optional extra.
+    class Docker:  # noqa: D401 - type-checking stub
+        async def __aenter__(self) -> Docker: ...
 
-def _import_aiodocker():
+        async def __aexit__(self, *exc: object) -> None: ...
+
+        async def close(self) -> None: ...
+
+        containers: Any
+        images: Any
+
+    class DockerError(Exception): ...
+
+
+def _import_aiodocker() -> tuple[type[Docker], type[DockerError]]:
     """Lazy import; convert ImportError → SandboxDependencyMissingError."""
     try:
         from aiodocker import Docker, DockerError
@@ -78,7 +95,8 @@ class _DockerExec:
             exec_obj = await container.exec(
                 cmd=exec_cmd,
                 stdin=stdin is not None,
-                stdout=True, stderr=True,
+                stdout=True,
+                stderr=True,
             )
 
             try:

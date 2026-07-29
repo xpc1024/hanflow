@@ -1,5 +1,7 @@
 """Tests for Phase 14 workflows API: create 409, list meta, validate structured, dry-run SSE."""
+
 from __future__ import annotations
+
 import uuid
 
 
@@ -47,9 +49,11 @@ def test_dry_run_returns_sse_stream(client):
     uid = f"dr_{uuid.uuid4().hex[:8]}"
     yaml = "name: dr\nnodes:\n  - id: a\n    type: LLM\n    config:\n      template: hello\n"
     client.post("/api/workflows", json={"id": uid, "yaml": yaml})
-    with client.stream("POST", f"/api/workflows/{uid}/dry-run", json={"yaml": yaml, "inputs": {}}) as resp:
+    with client.stream(
+        "POST", f"/api/workflows/{uid}/dry-run", json={"yaml": yaml, "inputs": {}}
+    ) as resp:
         assert resp.status_code == 200
         lines = []
         for line in resp.iter_lines():
             lines.append(line)
-        assert any("data:" in l for l in lines)
+        assert any("data:" in line for line in lines)

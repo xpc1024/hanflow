@@ -4,6 +4,7 @@ Verifies type definitions, Protocol shape, and the critical charter-check
 invariant: core/sandbox_contract.py must not import hanflow.isolation.*
 (reverse-dependency guard).
 """
+
 from __future__ import annotations
 
 import inspect
@@ -37,8 +38,11 @@ def test_sandbox_resources_defaults():
 
 def test_sandbox_resources_custom_values():
     r = SandboxResources(
-        cpu_limit="4.0", memory_limit_mb=8192, timeout_seconds=7200,
-        disk_limit_mb=10240, network_egress=["*"],
+        cpu_limit="4.0",
+        memory_limit_mb=8192,
+        timeout_seconds=7200,
+        disk_limit_mb=10240,
+        network_egress=["*"],
     )
     assert r.cpu_limit == "4.0"
     assert r.memory_limit_mb == 8192
@@ -60,7 +64,9 @@ def test_run_sandbox_fields():
 
 def test_run_sandbox_create_local():
     class FakeMgr:
-        def workspace_for(self, run_id): return Path(f"/tmp/{run_id}")
+        def workspace_for(self, run_id):
+            return Path(f"/tmp/{run_id}")
+
     sb = RunSandbox.create("r1", SandboxMode.LOCAL, FakeMgr())
     assert sb.workspace_root == Path("/tmp/r1")
     assert sb.bash_enabled is False
@@ -68,7 +74,9 @@ def test_run_sandbox_create_local():
 
 def test_run_sandbox_create_with_custom_resources():
     class FakeMgr:
-        def workspace_for(self, run_id): return Path(f"/tmp/{run_id}")
+        def workspace_for(self, run_id):
+            return Path(f"/tmp/{run_id}")
+
     custom = SandboxResources(cpu_limit="0.5", memory_limit_mb=128)
     sb = RunSandbox.create("r2", SandboxMode.LOCAL, FakeMgr(), resources=custom)
     assert sb.resources.cpu_limit == "0.5"
@@ -118,12 +126,16 @@ def test_provisioned_sandbox_exec_interface_typed_any_for_any_object():
     Contract is enforced structurally by callers (ExecInterface is
     @runtime_checkable); ProvisionedSandbox accepts any object.
     """
+
     class NotAnExec:
         pass  # 故意不实现 run()
 
     ps = ProvisionedSandbox(
-        run_id="r1", mode=SandboxMode.LOCAL, container_id=None,
-        exec_interface=NotAnExec(), workspace_root=Path("/tmp"),
+        run_id="r1",
+        mode=SandboxMode.LOCAL,
+        container_id=None,
+        exec_interface=NotAnExec(),
+        workspace_root=Path("/tmp"),
     )
     # ProvisionedSandbox 不做 isinstance 校验; 调用方负责
     assert ps.exec_interface is not None
@@ -141,26 +153,25 @@ def test_sandbox_contract_does_not_import_isolation():
     Only checks actual import statements (not docstring mentions).
     """
     import hanflow.core.sandbox_contract as mod
+
     src = inspect.getsource(mod)
     # 只扫真正的 import 行, 跳过 docstring/注释里提到的模块路径
     import_lines = [
-        line.strip() for line in src.splitlines()
-        if line.strip().startswith(("from ", "import "))
+        line.strip() for line in src.splitlines() if line.strip().startswith(("from ", "import "))
     ]
     for line in import_lines:
         assert "hanflow.isolation" not in line, (
-            f"core/sandbox_contract.py forbidden import: {line} "
-            f"(CHARTER §3 reverse-dep guard)"
+            f"core/sandbox_contract.py forbidden import: {line} (CHARTER §3 reverse-dep guard)"
         )
 
 
 def test_sandbox_contract_only_depends_on_core_and_stdlib():
     """All imports in core/sandbox_contract.py must be stdlib or hanflow.core.*"""
     import hanflow.core.sandbox_contract as mod
+
     src = inspect.getsource(mod)
     import_lines = [
-        line.strip() for line in src.splitlines()
-        if line.strip().startswith(("from ", "import "))
+        line.strip() for line in src.splitlines() if line.strip().startswith(("from ", "import "))
     ]
     for line in import_lines:
         # 允许: from __future__, from enum, from pathlib, from typing,
@@ -181,6 +192,7 @@ def test_type_identity_with_isolation_reexport():
     from hanflow.isolation.sandbox import (
         SandboxResources as IsoSandboxResources,
     )
+
     assert IsoRunSandbox is RunSandbox
     assert IsoSandboxMode is SandboxMode
     assert IsoSandboxResources is SandboxResources

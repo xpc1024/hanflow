@@ -1,4 +1,5 @@
 """StreamChunk model tests (§design StreamChunk)."""
+
 from hanflow.models.providers.base import StreamChunk, TokenUsage
 
 
