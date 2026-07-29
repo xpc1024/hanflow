@@ -6,6 +6,7 @@ import time
 from collections.abc import AsyncIterator
 from typing import Any
 
+from hanflow.core.errors import ModelTimeoutError
 from hanflow.models.providers.base import ModelResponse, StreamChunk, TokenUsage
 
 
@@ -50,5 +51,42 @@ class OllamaProvider:
     async def stream(
         self, model: str, messages: list[Any], **kwargs: Any
     ) -> AsyncIterator[StreamChunk]:
-        raise NotImplementedError("stream() for ollama lands in next cycle (2026-W30+)")
-        yield  # pragma: no cover — satisfy async generator signature
+        """Stream chunks (§design §6 ollama). Wraps SDK errors as ModelTimeoutError.
+
+        Connection-phase failures keep ``retryable=True`` (class default);
+        mid-flight failures set ``retryable=False`` on the raised instance.
+        Ollama's SDK returns an async iterator of dicts (not objects): each
+        carries ``message.content``; the final dict carries ``done`` + usage
+        (``prompt_eval_count`` / ``eval_count``) and ``done_reason``.
+        """
+        import ollama
+
+        try:
+            client = ollama.AsyncClient(host=self.base_url)
+            resp = await client.chat(model=model, messages=messages, stream=True, **kwargs)
+        except Exception as e:
+            raise ModelTimeoutError(f"ollama stream connect failed: {e}") from e
+        try:
+            async for chunk in resp:
+                message = chunk.get("message") or {}
+                delta = message.get("content", "") or ""
+                done = bool(chunk.get("done"))
+                if done:
+                    yield StreamChunk(
+                        delta=delta,
+                        usage=TokenUsage(
+                            input_tokens=int(chunk.get("prompt_eval_count") or 0),
+                            output_tokens=int(chunk.get("eval_count") or 0),
+                            total_tokens=int(chunk.get("prompt_eval_count") or 0)
+                            + int(chunk.get("eval_count") or 0),
+                            cost_usd=0.0,
+                            latency_ms=0.0,
+                        ),
+                        finish_reason=chunk.get("done_reason"),
+                    )
+                else:
+                    yield StreamChunk(delta=delta)
+        except Exception as e:
+            err = ModelTimeoutError(f"ollama stream mid-flight failed: {e}")
+            err.retryable = False  # retryable is a class attr; override on the instance
+            raise err from e
