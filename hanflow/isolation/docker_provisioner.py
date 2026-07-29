@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from hanflow.core.errors import (
     SandboxDependencyMissingError,
@@ -32,25 +32,15 @@ from hanflow.core.sandbox_contract import (
     SandboxResources,
 )
 
-if TYPE_CHECKING:
-    # aiodocker ships no py.typed marker / stubs; declare minimal runtime
-    # shapes so type-checking sees the symbols used below. The real import is
-    # lazy (see ``_import_aiodocker``) because aiodocker is an optional extra.
-    class Docker:  # noqa: D401 - type-checking stub
-        async def __aenter__(self) -> Docker: ...
 
-        async def __aexit__(self, *exc: object) -> None: ...
+def _import_aiodocker() -> tuple[type[Any], type[Any]]:
+    """Lazy import; convert ImportError → SandboxDependencyMissingError.
 
-        async def close(self) -> None: ...
-
-        containers: Any
-        images: Any
-
-    class DockerError(Exception): ...
-
-
-def _import_aiodocker() -> tuple[type[Docker], type[DockerError]]:
-    """Lazy import; convert ImportError → SandboxDependencyMissingError."""
+    Returns the ``aiodocker.Docker`` client class and ``DockerError`` exception
+    class. They are typed as ``type[Any]`` because ``aiodocker`` ships no
+    ``py.typed`` marker; ``pyproject.toml`` sets ``ignore_missing_imports`` for
+    it so this stays mypy-clean without the optional extra installed.
+    """
     try:
         from aiodocker import Docker, DockerError
     except ImportError as exc:
