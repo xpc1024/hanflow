@@ -166,3 +166,27 @@ async def test_placeholder_providers_raise_not_implemented(modname, clsname):
     provider = cls(**kwargs)
     with pytest.raises(NotImplementedError):
         _ = [c async for c in provider.stream("m", [])]
+
+
+# --- deepseek / vllm: streaming is inherited from OpenAIProvider (no override) ---
+# These providers are OpenAI-compatible; their `stream()` is the inherited base
+# impl, routed to the correct base_url via __init__. No SDK call is made here.
+
+
+def test_deepseek_inherits_openai_stream_and_routes_base_url():
+    from hanflow.models.providers.deepseek import DeepSeekProvider
+    from hanflow.models.providers.openai import OpenAIProvider
+
+    provider = DeepSeekProvider(api_key="k")
+    # class-attribute identity: stream is the inherited OpenAIProvider.stream
+    assert type(provider).stream is OpenAIProvider.stream
+    assert provider.base_url == "https://api.deepseek.com"
+
+
+def test_vllm_inherits_openai_stream_and_routes_base_url():
+    from hanflow.models.providers.openai import OpenAIProvider
+    from hanflow.models.providers.vllm import VLLMProvider
+
+    provider = VLLMProvider()
+    assert type(provider).stream is OpenAIProvider.stream
+    assert provider.base_url == "http://localhost:8000/v1"
