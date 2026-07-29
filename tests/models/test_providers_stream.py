@@ -245,8 +245,13 @@ def ollama_module_clean():
 async def test_ollama_stream_parses_chunks(ollama_module_clean):
     chunks = [
         {"message": {"content": "hel"}, "done": False},
-        {"message": {"content": "lo"}, "done": True, "done_reason": "stop",
-         "prompt_eval_count": 5, "eval_count": 2},
+        {
+            "message": {"content": "lo"},
+            "done": True,
+            "done_reason": "stop",
+            "prompt_eval_count": 5,
+            "eval_count": 2,
+        },
     ]
     _install_fake_ollama(_FakeOllamaClient(chunks))
 
@@ -262,8 +267,13 @@ async def test_ollama_stream_parses_chunks(ollama_module_clean):
 async def test_ollama_stream_includes_usage(ollama_module_clean):
     chunks = [
         {"message": {"content": "hi"}, "done": False},
-        {"message": {"content": ""}, "done": True, "done_reason": "stop",
-         "prompt_eval_count": 10, "eval_count": 4},
+        {
+            "message": {"content": ""},
+            "done": True,
+            "done_reason": "stop",
+            "prompt_eval_count": 10,
+            "eval_count": 4,
+        },
     ]
     _install_fake_ollama(_FakeOllamaClient(chunks))
 
@@ -404,12 +414,11 @@ def _anthropic_events(deltas, *, input_tokens=5, output_tokens=3, stop="end_turn
     """Build a canonical event stream: message_start + deltas + message_delta."""
     events = [_FakeAnthropicEvent("message_start", message=_FakeMessage(input_tokens))]
     for d in deltas:
-        events.append(
-            _FakeAnthropicEvent("content_block_delta", delta=_FakeAnthropicDelta(text=d))
-        )
+        events.append(_FakeAnthropicEvent("content_block_delta", delta=_FakeAnthropicDelta(text=d)))
     events.append(
         _FakeAnthropicEvent(
-            "message_delta", usage=_FakeAnthropicUsage(output_tokens=output_tokens),
+            "message_delta",
+            usage=_FakeAnthropicUsage(output_tokens=output_tokens),
             delta=_FakeAnthropicDelta(stop_reason=stop),
         )
     )
@@ -449,9 +458,7 @@ async def test_anthropic_stream_combines_usage_from_message_start_and_delta(anth
 @pytest.mark.asyncio
 async def test_anthropic_stream_wraps_connection_error(anthropic_module_clean):
     # messages.stream(...) itself raises (the async-with __aenter__ path)
-    _install_fake_anthropic(
-        _FakeAnthropicMessages([], connect_error=Exception("connect refused"))
-    )
+    _install_fake_anthropic(_FakeAnthropicMessages([], connect_error=Exception("connect refused")))
 
     from hanflow.models.providers.anthropic import AnthropicProvider
 
