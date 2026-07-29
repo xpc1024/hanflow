@@ -45,9 +45,7 @@ class FakeProvider:
             provider=self.name,
         )
 
-    async def stream(
-        self, model: str, messages: list, **kwargs: Any
-    ) -> AsyncIterator[StreamChunk]:
+    async def stream(self, model: str, messages: list, **kwargs: Any) -> AsyncIterator[StreamChunk]:
         if self.fail_with is not None:
             raise self.fail_with
         self.calls.append((model, messages))

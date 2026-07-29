@@ -23,7 +23,7 @@ def _get_result(run_id: str) -> dict[str, Any]:
 
 @router.get("/api/runs/{run_id}/trace")
 async def trace(run_id: str) -> dict[str, Any]:
-    result = _get_result(run_id)
+    _get_result(run_id)  # validates run exists (404 if missing)
     return {
         "run_id": run_id,
         "trace_tree": None,  # Phase 17: wire LocalTraceProvider

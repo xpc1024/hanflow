@@ -1,6 +1,6 @@
 [project]
 name = "hanflow"
-version = "1.2.0"
+version = "1.2.1"
 description = "Hanflow — Harmony AI Nexus: a high-control agent framework on LangGraph."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -69,6 +69,14 @@ python_version = "3.11"
 strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+# aiodocker is an optional extra (``pip install hanflow[docker]``) and ships
+# no py.typed marker; the lazy import in docker_provisioner.py converts the
+# missing dep into a SandboxDependencyMissingError at runtime. Ignore its
+# missing stubs so ``make typecheck`` is green without the extra installed.
+[[tool.mypy.overrides]]
+module = "aiodocker"
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100

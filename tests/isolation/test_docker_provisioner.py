@@ -6,6 +6,7 @@ Strategy:
   - Full provision/destroy lifecycle: ``pytest.mark.skipif(not HAS_DOCKER)`` —
     runs only when a docker daemon is actually reachable.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -29,7 +30,8 @@ def _docker_available() -> bool:
     try:
         r = subprocess.run(
             ["docker", "info", "--format", "{{.ServerVersion}}"],
-            capture_output=True, timeout=5,
+            capture_output=True,
+            timeout=5,
         )
         return r.returncode == 0 and bool(r.stdout.decode().strip())
     except Exception:
@@ -56,10 +58,15 @@ def test_build_config_resource_mapping(tmp_path):
 
     p = DockerProvisioner(base_image="python:3.11-slim")
     sb = RunSandbox(
-        run_id="r1", mode=SandboxMode.DOCKER, workspace_root=tmp_path,
+        run_id="r1",
+        mode=SandboxMode.DOCKER,
+        workspace_root=tmp_path,
         resources=SandboxResources(
-            cpu_limit="2.0", memory_limit_mb=2048, timeout_seconds=3600,
-            disk_limit_mb=5120, network_egress=None,
+            cpu_limit="2.0",
+            memory_limit_mb=2048,
+            timeout_seconds=3600,
+            disk_limit_mb=5120,
+            network_egress=None,
         ),
     )
     config = p._build_config(sb)
@@ -82,7 +89,9 @@ def test_build_config_network_host_when_egress_set(tmp_path):
 
     p = DockerProvisioner()
     sb = RunSandbox(
-        run_id="r1", mode=SandboxMode.DOCKER, workspace_root=tmp_path,
+        run_id="r1",
+        mode=SandboxMode.DOCKER,
+        workspace_root=tmp_path,
         resources=SandboxResources(network_egress=["*"]),
     )
     config = p._build_config(sb)
@@ -95,7 +104,9 @@ def test_build_config_cpu_quota_fractional(tmp_path):
 
     p = DockerProvisioner()
     sb = RunSandbox(
-        run_id="r1", mode=SandboxMode.DOCKER, workspace_root=tmp_path,
+        run_id="r1",
+        mode=SandboxMode.DOCKER,
+        workspace_root=tmp_path,
         resources=SandboxResources(cpu_limit="0.5"),
     )
     config = p._build_config(sb)
@@ -108,7 +119,9 @@ def test_build_config_no_storage_opt_when_disk_zero(tmp_path):
 
     p = DockerProvisioner()
     sb = RunSandbox(
-        run_id="r1", mode=SandboxMode.DOCKER, workspace_root=tmp_path,
+        run_id="r1",
+        mode=SandboxMode.DOCKER,
+        workspace_root=tmp_path,
         resources=SandboxResources(disk_limit_mb=0),
     )
     config = p._build_config(sb)
@@ -117,6 +130,7 @@ def test_build_config_no_storage_opt_when_disk_zero(tmp_path):
 
 def test_docker_provisioner_name():
     from hanflow.isolation.docker_provisioner import DockerProvisioner
+
     assert DockerProvisioner.name == "docker"
 
 
@@ -167,9 +181,12 @@ async def test_provision_real_container_lifecycle(tmp_path):
 
     sb = RunSandbox(
         run_id=f"hanflow-test-{tmp_path.name[:8]}",
-        mode=SandboxMode.DOCKER, workspace_root=tmp_path,
+        mode=SandboxMode.DOCKER,
+        workspace_root=tmp_path,
         resources=SandboxResources(
-            cpu_limit="1.0", memory_limit_mb=512, timeout_seconds=60,
+            cpu_limit="1.0",
+            memory_limit_mb=512,
+            timeout_seconds=60,
         ),
     )
     p = DockerProvisioner(base_image="python:3.11-slim")
@@ -181,7 +198,8 @@ async def test_provision_real_container_lifecycle(tmp_path):
         assert str(provisioned.workspace_root) == "/workspace"
 
         result = await provisioned.exec_interface.run(
-            command=["python3", "-c", "print('hello from docker')"], timeout=15,
+            command=["python3", "-c", "print('hello from docker')"],
+            timeout=15,
         )
         assert result["returncode"] == 0
         assert "hello from docker" in result["stdout"]
@@ -197,9 +215,12 @@ async def test_provision_resource_limits_enforced(tmp_path):
 
     sb = RunSandbox(
         run_id=f"hanflow-rl-{tmp_path.name[:8]}",
-        mode=SandboxMode.DOCKER, workspace_root=tmp_path,
+        mode=SandboxMode.DOCKER,
+        workspace_root=tmp_path,
         resources=SandboxResources(
-            cpu_limit="1.5", memory_limit_mb=256, timeout_seconds=30,
+            cpu_limit="1.5",
+            memory_limit_mb=256,
+            timeout_seconds=30,
         ),
     )
     p = DockerProvisioner(base_image="python:3.11-slim")
@@ -207,9 +228,13 @@ async def test_provision_resource_limits_enforced(tmp_path):
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            "docker", "inspect", "--format", "{{.HostConfig.Memory}}",
+            "docker",
+            "inspect",
+            "--format",
+            "{{.HostConfig.Memory}}",
             provisioned.container_id,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         stdout, _ = await proc.communicate()
         # 256 MB = 268435456 bytes
@@ -226,7 +251,8 @@ async def test_destroy_removes_container(tmp_path):
 
     sb = RunSandbox(
         run_id=f"hanflow-dest-{tmp_path.name[:8]}",
-        mode=SandboxMode.DOCKER, workspace_root=tmp_path,
+        mode=SandboxMode.DOCKER,
+        workspace_root=tmp_path,
         resources=SandboxResources(timeout_seconds=30),
     )
     p = DockerProvisioner(base_image="python:3.11-slim")
@@ -238,8 +264,13 @@ async def test_destroy_removes_container(tmp_path):
 
     # Container should be gone
     proc = await asyncio.create_subprocess_exec(
-        "docker", "inspect", "--format", "{{.Id}}", cid,
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Id}}",
+        cid,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     await proc.communicate()
     assert proc.returncode != 0  # docker inspect fails on absent container
@@ -254,7 +285,8 @@ async def test_exec_timeout_wrapped_as_sandbox_timeout(tmp_path):
 
     sb = RunSandbox(
         run_id=f"hanflow-to-{tmp_path.name[:8]}",
-        mode=SandboxMode.DOCKER, workspace_root=tmp_path,
+        mode=SandboxMode.DOCKER,
+        workspace_root=tmp_path,
         resources=SandboxResources(timeout_seconds=30),
     )
     p = DockerProvisioner(base_image="python:3.11-slim")

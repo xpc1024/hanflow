@@ -1,4 +1,5 @@
 """Tests for WorkflowNode.disabled field (Phase 12 Task 0)."""
+
 from __future__ import annotations
 
 from hanflow.core.dsl import WorkflowDSL, WorkflowNode
@@ -10,9 +11,12 @@ def test_workflow_node_has_disabled_field_default_false():
 
 
 def test_dsl_accepts_disabled_node():
-    dsl = WorkflowDSL(name="w", nodes=[
-        WorkflowNode(id="a", type="LLM", disabled=True),
-    ])
+    dsl = WorkflowDSL(
+        name="w",
+        nodes=[
+            WorkflowNode(id="a", type="LLM", disabled=True),
+        ],
+    )
     assert dsl.nodes[0].disabled is True
 
 

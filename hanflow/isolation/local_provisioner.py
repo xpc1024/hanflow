@@ -6,6 +6,7 @@ to deliver the same ``ExecInterface`` contract that ``_DockerExec`` does for
 DOCKER mode. Timeouts are wrapped internally as ``SandboxTimeoutError`` so
 callers (e.g. ``code_exec``) never see bare ``TimeoutError`` (§5 no-swallow).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -77,8 +78,7 @@ class LocalProvisioner:
         if run_sandbox.mode not in (SandboxMode.LOCAL, SandboxMode.NONE):
             # Programmer error: build_sandbox should dispatch by mode.
             raise ValueError(
-                f"LocalProvisioner requires SandboxMode.LOCAL or NONE, "
-                f"got {run_sandbox.mode!r}"
+                f"LocalProvisioner requires SandboxMode.LOCAL or NONE, got {run_sandbox.mode!r}"
             )
         return ProvisionedSandbox(
             run_id=run_sandbox.run_id,

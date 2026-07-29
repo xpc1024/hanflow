@@ -26,6 +26,7 @@ implementations live in sibling files (``local_provisioner.py``,
 ``docker_provisioner.py``) plus the ``K8sProvisioner`` placeholder at the
 bottom of this file.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -109,7 +110,10 @@ async def spawn_agent(
     real RuntimeContext implementation with the same shape).
     """
     async with trace.span(
-        "agent.spawn", kind="workflow", sub_agent=spec.sub_agent, role=spec.role,
+        "agent.spawn",
+        kind="workflow",
+        sub_agent=spec.sub_agent,
+        role=spec.role,
     ) as sp:  # round 1 audit cleanup: use the yielded Span
         from hanflow.core.context import FakeContext
 
@@ -143,7 +147,8 @@ async def spawn_agent(
             subdir = f"{workspace_str}/{subdir_name}"
             try:
                 await provisioned.exec_interface.run(
-                    command=["mkdir", "-p", subdir], timeout=5,
+                    command=["mkdir", "-p", subdir],
+                    timeout=5,
                 )
             except SandboxError:
                 # propagate专用 subclass — preserves code + retryable (§5).
@@ -171,7 +176,9 @@ async def spawn_agent(
         child = FakeContext(state=child_state)
         child._tool_whitelist = spec.tools_whitelist  # type: ignore[attr-defined]
         await trace.event(
-            "agent.spawned", sub_agent=spec.sub_agent, span_id=sp.span_id,
+            "agent.spawned",
+            sub_agent=spec.sub_agent,
+            span_id=sp.span_id,
         )
         return child
 
@@ -205,12 +212,10 @@ class K8sProvisioner:
 
     async def provision(self, run_sandbox: RunSandbox) -> ProvisionedSandbox:
         raise NotImplementedError(
-            f"K8S sandbox provisioning lands in Phase 10 "
-            f"(got run_id={run_sandbox.run_id})"
+            f"K8S sandbox provisioning lands in Phase 10 (got run_id={run_sandbox.run_id})"
         )
 
     async def destroy(self, provisioned: ProvisionedSandbox) -> None:
         raise NotImplementedError(
-            f"K8S sandbox destroy lands in Phase 10 "
-            f"(got run_id={provisioned.run_id})"
+            f"K8S sandbox destroy lands in Phase 10 (got run_id={provisioned.run_id})"
         )

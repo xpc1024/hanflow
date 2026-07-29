@@ -36,72 +36,132 @@ _NODE_META: dict[str, dict[str, Any]] = {
 # Standard JSON Schema for each node type's config (Phase 13 spec §3.2)
 _CONFIG_SCHEMA: dict[str, dict[str, Any]] = {
     "Sequential": {"type": "object", "properties": {}},
-    "Parallel": {"type": "object", "properties": {
-        "join": {"type": "string", "enum": ["all", "any", "first_n"]},
-        "n": {"type": "integer", "minimum": 1}}},
-    "Loop": {"type": "object", "properties": {
-        "max_iterations": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 100},
-        "condition": {"type": "string", "format": "textarea"},
-        "body": {"type": "array", "items": {"type": "string"}}}},
-    "Branch": {"type": "object", "properties": {
-        "cases": {"type": "object", "additionalProperties": {"type": "string", "format": "textarea"}},
-        "default": {"type": "string"}}},
-    "HITL": {"type": "object", "properties": {
-        "actions": {"type": "array", "items": {"type": "string", "enum": ["approve", "edit", "reject", "reroute"]}},
-        "title": {"type": "string"},
-        "description": {"type": "string", "format": "textarea"},
-        "form": {"type": "object"},
-        "timeout_seconds": {"type": "integer", "minimum": 1},
-        "reject_branch": {"type": "string"}}},
-    "LLM": {"type": "object", "properties": {
-        "template": {"type": "string", "format": "textarea"},
-        "prompt": {"type": "string", "format": "textarea"},
-        "model": {"type": "string"},
-        "role": {"type": "string", "enum": ["planner", "researcher", "coder"]}}},
-    "Tool": {"type": "object", "properties": {
-        "tool": {"type": "string"},
-        "args": {"type": "object", "additionalProperties": True}}},
-    "Research": {"type": "object", "properties": {
-        "query": {"type": "string", "format": "textarea"},
-        "depth": {"type": "string", "enum": ["quick", "standard", "deep"]},
-        "max_sources": {"type": "integer", "minimum": 1, "maximum": 50},
-        "private_kb": {"type": "string"},
-        "citation": {"type": "boolean"}}},
-    "Execution": {"type": "object", "properties": {
-        "task": {"type": "string", "format": "textarea"},
-        "sandbox": {"type": "string", "enum": ["docker", "firecracker", "none"]},
-        "max_steps": {"type": "integer", "minimum": 1, "maximum": 200},
-        "allow_delegate": {"type": "boolean"},
-        "skills": {"type": "array", "items": {"type": "string"}},
-        "tools_whitelist": {"type": "array", "items": {"type": "string"}}}},
-    "Coordinator": {"type": "object", "properties": {
-        "sub_agents": {"type": "array", "items": {"type": "string"}},
-        "planning_model": {"type": "string"},
-        "plan_hitl": {"type": "boolean"},
-        "replan": {"type": "boolean"},
-        "max_iterations": {"type": "integer", "minimum": 1, "maximum": 20, "default": 5},
-        "success_criteria": {"type": "string", "format": "textarea"},
-        "skills": {"type": "array", "items": {"type": "string"}}}},
-    "Memory": {"type": "object", "properties": {
-        "action": {"type": "string", "enum": ["read", "write", "update", "delete", "summarize"]},
-        "key": {"type": "string"},
-        "value": {},
-        "scope": {"type": "string", "enum": ["scratch", "session", "long_term"]},
-        "ttl_seconds": {"type": "integer", "minimum": 1},
-        "source_keys": {"type": "array", "items": {"type": "string"}}}},
-    "Subworkflow": {"type": "object", "properties": {
-        "ref": {"type": "string"},
-        "inputs": {"type": "object"},
-        "version": {"type": "string"},
-        "timeout_seconds": {"type": "integer", "minimum": 1}}},
-    "Knowledge": {"type": "object", "properties": {
-        "store": {"type": "string"},
-        "query": {"type": "string", "format": "textarea"},
-        "top_k": {"type": "integer", "minimum": 1, "maximum": 100, "default": 5},
-        "rerank": {"type": "string"},
-        "filter": {"type": "object"},
-        "min_score": {"type": "number", "minimum": 0, "maximum": 1},
-        "embedding": {"type": "string"}}},
+    "Parallel": {
+        "type": "object",
+        "properties": {
+            "join": {"type": "string", "enum": ["all", "any", "first_n"]},
+            "n": {"type": "integer", "minimum": 1},
+        },
+    },
+    "Loop": {
+        "type": "object",
+        "properties": {
+            "max_iterations": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 100},
+            "condition": {"type": "string", "format": "textarea"},
+            "body": {"type": "array", "items": {"type": "string"}},
+        },
+    },
+    "Branch": {
+        "type": "object",
+        "properties": {
+            "cases": {
+                "type": "object",
+                "additionalProperties": {"type": "string", "format": "textarea"},
+            },
+            "default": {"type": "string"},
+        },
+    },
+    "HITL": {
+        "type": "object",
+        "properties": {
+            "actions": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["approve", "edit", "reject", "reroute"],
+                },
+            },
+            "title": {"type": "string"},
+            "description": {"type": "string", "format": "textarea"},
+            "form": {"type": "object"},
+            "timeout_seconds": {"type": "integer", "minimum": 1},
+            "reject_branch": {"type": "string"},
+        },
+    },
+    "LLM": {
+        "type": "object",
+        "properties": {
+            "template": {"type": "string", "format": "textarea"},
+            "prompt": {"type": "string", "format": "textarea"},
+            "model": {"type": "string"},
+            "role": {"type": "string", "enum": ["planner", "researcher", "coder"]},
+        },
+    },
+    "Tool": {
+        "type": "object",
+        "properties": {
+            "tool": {"type": "string"},
+            "args": {"type": "object", "additionalProperties": True},
+        },
+    },
+    "Research": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "format": "textarea"},
+            "depth": {"type": "string", "enum": ["quick", "standard", "deep"]},
+            "max_sources": {"type": "integer", "minimum": 1, "maximum": 50},
+            "private_kb": {"type": "string"},
+            "citation": {"type": "boolean"},
+        },
+    },
+    "Execution": {
+        "type": "object",
+        "properties": {
+            "task": {"type": "string", "format": "textarea"},
+            "sandbox": {"type": "string", "enum": ["docker", "firecracker", "none"]},
+            "max_steps": {"type": "integer", "minimum": 1, "maximum": 200},
+            "allow_delegate": {"type": "boolean"},
+            "skills": {"type": "array", "items": {"type": "string"}},
+            "tools_whitelist": {"type": "array", "items": {"type": "string"}},
+        },
+    },
+    "Coordinator": {
+        "type": "object",
+        "properties": {
+            "sub_agents": {"type": "array", "items": {"type": "string"}},
+            "planning_model": {"type": "string"},
+            "plan_hitl": {"type": "boolean"},
+            "replan": {"type": "boolean"},
+            "max_iterations": {"type": "integer", "minimum": 1, "maximum": 20, "default": 5},
+            "success_criteria": {"type": "string", "format": "textarea"},
+            "skills": {"type": "array", "items": {"type": "string"}},
+        },
+    },
+    "Memory": {
+        "type": "object",
+        "properties": {
+            "action": {
+                "type": "string",
+                "enum": ["read", "write", "update", "delete", "summarize"],
+            },
+            "key": {"type": "string"},
+            "value": {},
+            "scope": {"type": "string", "enum": ["scratch", "session", "long_term"]},
+            "ttl_seconds": {"type": "integer", "minimum": 1},
+            "source_keys": {"type": "array", "items": {"type": "string"}},
+        },
+    },
+    "Subworkflow": {
+        "type": "object",
+        "properties": {
+            "ref": {"type": "string"},
+            "inputs": {"type": "object"},
+            "version": {"type": "string"},
+            "timeout_seconds": {"type": "integer", "minimum": 1},
+        },
+    },
+    "Knowledge": {
+        "type": "object",
+        "properties": {
+            "store": {"type": "string"},
+            "query": {"type": "string", "format": "textarea"},
+            "top_k": {"type": "integer", "minimum": 1, "maximum": 100, "default": 5},
+            "rerank": {"type": "string"},
+            "filter": {"type": "object"},
+            "min_score": {"type": "number", "minimum": 0, "maximum": 1},
+            "embedding": {"type": "string"},
+        },
+    },
 }
 
 _VALIDATION_RULES: dict[str, dict[str, Any]] = {
@@ -115,9 +175,13 @@ _VALIDATION_RULES: dict[str, dict[str, Any]] = {
     "Research": {"required": ["query"]},
     "Execution": {"required": ["task"]},
     "Coordinator": {"ranges": {"max_iterations": {"min": 1, "max": 20}}},
-    "Memory": {"required": ["action", "key"],
-               "enums": {"action": ["read", "write", "update", "delete", "summarize"],
-                         "scope": ["scratch", "session", "long_term"]}},
+    "Memory": {
+        "required": ["action", "key"],
+        "enums": {
+            "action": ["read", "write", "update", "delete", "summarize"],
+            "scope": ["scratch", "session", "long_term"],
+        },
+    },
     "Subworkflow": {"required": ["ref"]},
     "Knowledge": {"required": ["store", "query"]},
 }

@@ -1,4 +1,5 @@
 """Tests for Phase 13 schema endpoint: standard JSON Schema + validation_rules + output_schema."""
+
 from __future__ import annotations
 
 
@@ -12,6 +13,7 @@ def test_dsl_schema(client):
 
 def test_node_schema_returns_standard_json_schema_for_all_types(client):
     from typing import get_args
+
     from hanflow.core.dsl import NodeType
 
     for nt in get_args(NodeType):
@@ -79,6 +81,7 @@ def test_node_schema_has_visual_hints(client):
 
 def test_all_node_types_have_icon(client):
     from typing import get_args
+
     from hanflow.core.dsl import NodeType
 
     for nt in get_args(NodeType):

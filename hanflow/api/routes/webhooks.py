@@ -19,11 +19,10 @@ _max_concurrent = asyncio.Semaphore(10)
 
 @router.post("/api/webhooks/{workflow_id}/{token}")
 async def trigger_via_webhook(
-    workflow_id: str, token: str, payload: dict, request: Request
+    workflow_id: str, token: str, payload: dict[str, Any], request: Request
 ) -> dict[str, Any]:
-    from hanflow.api.deps import get_workflow_store, get_hanflow
-    from hanflow.api.routes.runs import _runs, _drive
-    from hanflow.api.ws import publish
+    from hanflow.api.deps import get_hanflow, get_workflow_store
+    from hanflow.api.routes.runs import _drive, _runs
 
     store = get_workflow_store(request)
     wf = store.get(workflow_id)
@@ -58,6 +57,7 @@ async def trigger_via_webhook(
         _runs[handle.run_id] = entry
 
         import asyncio
+
         asyncio.create_task(_drive(handle, entry))
         return {
             "run_id": handle.run_id,
@@ -67,5 +67,6 @@ async def trigger_via_webhook(
 
 
 def _now_iso() -> str:
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
+
     return datetime.now(UTC).isoformat()

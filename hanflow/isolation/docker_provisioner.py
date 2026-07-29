@@ -11,6 +11,7 @@ module-load failure.
 Timeouts are wrapped internally as ``SandboxTimeoutError`` so callers
 (``code_exec`` etc.) never see bare ``TimeoutError`` (§5 no-swallow).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -32,8 +33,14 @@ from hanflow.core.sandbox_contract import (
 )
 
 
-def _import_aiodocker():
-    """Lazy import; convert ImportError → SandboxDependencyMissingError."""
+def _import_aiodocker() -> tuple[type[Any], type[Any]]:
+    """Lazy import; convert ImportError → SandboxDependencyMissingError.
+
+    Returns the ``aiodocker.Docker`` client class and ``DockerError`` exception
+    class. They are typed as ``type[Any]`` because ``aiodocker`` ships no
+    ``py.typed`` marker; ``pyproject.toml`` sets ``ignore_missing_imports`` for
+    it so this stays mypy-clean without the optional extra installed.
+    """
     try:
         from aiodocker import Docker, DockerError
     except ImportError as exc:
@@ -78,7 +85,8 @@ class _DockerExec:
             exec_obj = await container.exec(
                 cmd=exec_cmd,
                 stdin=stdin is not None,
-                stdout=True, stderr=True,
+                stdout=True,
+                stderr=True,
             )
 
             try:

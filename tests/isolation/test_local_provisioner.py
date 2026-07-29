@@ -8,6 +8,7 @@ Covers:
   - _LocalExec.run wraps asyncio.TimeoutError internally as SandboxTimeoutError
   - nonzero returncode propagates (not raised, returned in dict)
 """
+
 from __future__ import annotations
 
 import sys
@@ -118,11 +119,14 @@ async def test_local_exec_run_with_stdin(tmp_path):
     exec_ = _LocalExec(tmp_path, "r1")
     snippet = tmp_path / "echo.py"
     snippet.write_text(
-        "data = input(); print(f'got: {data}')", encoding="utf-8",
+        "data = input(); print(f'got: {data}')",
+        encoding="utf-8",
     )
 
     result = await exec_.run(
-        command=[sys.executable, str(snippet)], stdin="hello", timeout=5,
+        command=[sys.executable, str(snippet)],
+        stdin="hello",
+        timeout=5,
     )
 
     assert result["returncode"] == 0
@@ -137,11 +141,14 @@ async def test_local_exec_run_with_cwd(tmp_path):
     exec_ = _LocalExec(tmp_path, "r1")
     snippet = tmp_path / "snippet.py"
     snippet.write_text(
-        "import os; print(os.getcwd())", encoding="utf-8",
+        "import os; print(os.getcwd())",
+        encoding="utf-8",
     )
 
     result = await exec_.run(
-        command=[sys.executable, str(snippet)], cwd=str(subdir), timeout=5,
+        command=[sys.executable, str(snippet)],
+        cwd=str(subdir),
+        timeout=5,
     )
 
     assert result["returncode"] == 0

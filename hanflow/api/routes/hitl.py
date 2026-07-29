@@ -57,9 +57,7 @@ async def _resume(run_id: str, record: HITLRecord) -> dict[str, str]:
     entry = _runs[run_id]
     # H4 修正: use decided_by guard instead of status (avoid stuck "resuming")
     if entry.get("decided_by") is not None:
-        raise HTTPException(
-            status_code=409, detail=f"Already decided by {entry['decided_by']}"
-        )
+        raise HTTPException(status_code=409, detail=f"Already decided by {entry['decided_by']}")
     handle = entry["handle"]
     resume_fn = getattr(handle, "_resume", None)
     if resume_fn is None:
