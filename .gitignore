@@ -4,6 +4,9 @@ __pycache__/
 .uv/
 *.egg-info/
 .pytest_cache/
+# coverage.py artifacts (make test-cov); local-only, not committed
+.coverage
+htmlcov/
 .mypy_cache/
 .ruff_cache/
 dist/
@@ -19,3 +22,6 @@ node_modules/
 workflows/*.yaml
 !workflows/.gitkeep
 web/web-dev.log
+
+# contribute-pr local state (do not commit)
+.contribute/
