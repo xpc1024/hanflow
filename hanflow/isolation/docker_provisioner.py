@@ -90,25 +90,33 @@ class _DockerExec:
             )
 
             try:
-                # aiodocker >=0.24: exec.start(detach=True) awaits and returns the
-                # full output as bytes (detach=False returns a WebSocket-style
-                # Stream that does NOT support `async for` — it needs receive*()).
-                # We use detach=True to get all stdout/stderr in one bytes blob,
-                # wrapped in asyncio.timeout so a hanging exec becomes a
-                # SandboxTimeoutError (matches the exec-timeout contract).
+                # aiodocker >=0.24: exec.start(detach=False) returns a Stream
+                # SYNCHRONOUSLY (not awaitable). Read output via read_out(),
+                # which returns a Message (.data) per frame or None at EOF.
+                # (Do NOT `async for` the Stream — it has no __aiter__; and
+                # detach=True returns raw multiplexed bytes that aren't demuxed.)
+                stream = exec_obj.start(detach=False)
+                output_chunks: list[bytes] = []
                 async with asyncio.timeout(timeout):
-                    raw = await exec_obj.start(detach=True)
+                    while True:
+                        msg = await stream.read_out()
+                        if msg is None:
+                            break
+                        data = msg.data
+                        if isinstance(data, (bytes, bytearray)):
+                            output_chunks.append(bytes(data))
+                        elif isinstance(data, str):
+                            output_chunks.append(data.encode())
 
                 inspect = await exec_obj.inspect()
                 returncode = inspect.get("ExitCode", 0) or 0
 
-                # aiodocker returns the raw multiplexed bytes; we treat the whole
-                # blob as stdout and leave stderr empty — matches the contract
-                # "dict with stdout/stderr/returncode".
-                if isinstance(raw, str):
-                    raw = raw.encode()
+                # aiodocker demuxes the docker stream framing in read_out(); we
+                # combine frames into stdout and leave stderr empty — matches
+                # the contract "dict with stdout/stderr/returncode".
+                raw = b"".join(output_chunks)
                 return {
-                    "stdout": bytes(raw).decode(errors="replace"),
+                    "stdout": raw.decode(errors="replace"),
                     "stderr": "",
                     "returncode": int(returncode),
                 }
