@@ -13,4 +13,10 @@ jobs:
       - run: make install
       - run: make lint
       - run: make typecheck
+      # Pre-pull the base image so the docker-isolation integration tests
+      # (which need python:3.11-slim present locally) actually run instead of
+      # being skipped. Allow-failure: if docker hub is unreachable, the tests
+      # fall back to skip via the _docker_available() image guard.
+      - run: docker pull python:3.11-slim
+        continue-on-error: true
       - run: make test

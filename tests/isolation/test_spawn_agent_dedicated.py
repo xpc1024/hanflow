@@ -185,8 +185,9 @@ async def test_local_mode_subdir_on_host(workspace_mgr, trace):
     )
 
     assert spec.workspace_subdir is not None
-    # host 路径, 不在 /workspace(容器视角)下
-    assert "/workspace/agent-" not in spec.workspace_subdir
+    # host 路径, 不以容器视角的 /workspace/agent- 绝对路径开头
+    # (用 startswith 而非子串匹配: host workspace_root 下也可能有 "workspace" 目录段)
+    assert not spec.workspace_subdir.startswith("/workspace/agent-")
     assert "agent-" in spec.workspace_subdir
 
 

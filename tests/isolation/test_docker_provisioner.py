@@ -22,24 +22,43 @@ from hanflow.core.errors import (
 )
 from hanflow.core.sandbox_contract import RunSandbox, SandboxMode, SandboxResources
 
+DOCKER_BASE_IMAGE = "python:3.11-slim"
+
 
 def _docker_available() -> bool:
-    """Probe docker CLI + running daemon (Linux engine accessible)."""
+    """Probe docker CLI + running daemon + the base image being present locally.
+
+    Daemon-reachable alone is insufficient: CI runners (e.g. GitHub Actions)
+    expose a docker daemon but don't pre-pull ``python:3.11-slim``, so the
+    provisioner's container create fails with ``[404] No such image``. Skip
+    unless the image actually exists locally (mirrors what the provisioner
+    needs to succeed).
+    """
     if not shutil.which("docker"):
         return False
     try:
-        r = subprocess.run(
+        info = subprocess.run(
             ["docker", "info", "--format", "{{.ServerVersion}}"],
             capture_output=True,
             timeout=5,
         )
-        return r.returncode == 0 and bool(r.stdout.decode().strip())
+        if info.returncode != 0 or not info.stdout.decode().strip():
+            return False
+        # Image must exist locally — create() does not auto-pull.
+        img = subprocess.run(
+            ["docker", "image", "inspect", DOCKER_BASE_IMAGE],
+            capture_output=True,
+            timeout=10,
+        )
+        return img.returncode == 0
     except Exception:
         return False
 
 
 HAS_DOCKER = _docker_available()
-skip_no_docker = pytest.mark.skipif(not HAS_DOCKER, reason="no docker daemon")
+skip_no_docker = pytest.mark.skipif(
+    not HAS_DOCKER, reason=f"no docker daemon or {DOCKER_BASE_IMAGE} image"
+)
 
 
 class _FakeMgr:
@@ -56,7 +75,7 @@ def test_build_config_resource_mapping(tmp_path):
     """Resource fields map to Docker HostConfig fields correctly."""
     from hanflow.isolation.docker_provisioner import DockerProvisioner
 
-    p = DockerProvisioner(base_image="python:3.11-slim")
+    p = DockerProvisioner(base_image=DOCKER_BASE_IMAGE)
     sb = RunSandbox(
         run_id="r1",
         mode=SandboxMode.DOCKER,
@@ -71,7 +90,7 @@ def test_build_config_resource_mapping(tmp_path):
     )
     config = p._build_config(sb)
 
-    assert config["Image"] == "python:3.11-slim"
+    assert config["Image"] == DOCKER_BASE_IMAGE
     assert config["Cmd"] == ["sleep", "3600"]
     assert config["WorkingDir"] == "/workspace"
     hc = config["HostConfig"]
@@ -189,7 +208,7 @@ async def test_provision_real_container_lifecycle(tmp_path):
             timeout_seconds=60,
         ),
     )
-    p = DockerProvisioner(base_image="python:3.11-slim")
+    p = DockerProvisioner(base_image=DOCKER_BASE_IMAGE)
     provisioned = await p.provision(sb)
 
     try:
@@ -223,7 +242,7 @@ async def test_provision_resource_limits_enforced(tmp_path):
             timeout_seconds=30,
         ),
     )
-    p = DockerProvisioner(base_image="python:3.11-slim")
+    p = DockerProvisioner(base_image=DOCKER_BASE_IMAGE)
     provisioned = await p.provision(sb)
 
     try:
@@ -255,7 +274,7 @@ async def test_destroy_removes_container(tmp_path):
         workspace_root=tmp_path,
         resources=SandboxResources(timeout_seconds=30),
     )
-    p = DockerProvisioner(base_image="python:3.11-slim")
+    p = DockerProvisioner(base_image=DOCKER_BASE_IMAGE)
     provisioned = await p.provision(sb)
     cid = provisioned.container_id
     assert cid is not None
@@ -289,7 +308,7 @@ async def test_exec_timeout_wrapped_as_sandbox_timeout(tmp_path):
         workspace_root=tmp_path,
         resources=SandboxResources(timeout_seconds=30),
     )
-    p = DockerProvisioner(base_image="python:3.11-slim")
+    p = DockerProvisioner(base_image=DOCKER_BASE_IMAGE)
     provisioned = await p.provision(sb)
 
     try:
