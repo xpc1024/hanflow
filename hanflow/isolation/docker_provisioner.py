@@ -90,27 +90,25 @@ class _DockerExec:
             )
 
             try:
-                # aiodocker's exec.start returns a stream; we drain it with a
-                # timeout. detach=False gives us the multiplexed output stream.
-                output_chunks: list[bytes] = []
+                # aiodocker >=0.24: exec.start(detach=True) awaits and returns the
+                # full output as bytes (detach=False returns a WebSocket-style
+                # Stream that does NOT support `async for` — it needs receive*()).
+                # We use detach=True to get all stdout/stderr in one bytes blob,
+                # wrapped in asyncio.timeout so a hanging exec becomes a
+                # SandboxTimeoutError (matches the exec-timeout contract).
                 async with asyncio.timeout(timeout):
-                    async for chunk in exec_obj.start(detach=False):
-                        if isinstance(chunk, (bytes, bytearray)):
-                            output_chunks.append(bytes(chunk))
-                        elif isinstance(chunk, str):
-                            output_chunks.append(chunk.encode())
+                    raw = await exec_obj.start(detach=True)
 
                 inspect = await exec_obj.inspect()
                 returncode = inspect.get("ExitCode", 0) or 0
 
-                # Docker multiplexed stream has 8-byte headers per frame
-                # alternating stdout/stderr; aiodocker demuxes when detaching
-                # is False but combines into one stream. For simplicity we
-                # put everything in stdout and leave stderr empty — matches
-                # the contract "dict with stdout/stderr/returncode".
-                raw = b"".join(output_chunks)
+                # aiodocker returns the raw multiplexed bytes; we treat the whole
+                # blob as stdout and leave stderr empty — matches the contract
+                # "dict with stdout/stderr/returncode".
+                if isinstance(raw, str):
+                    raw = raw.encode()
                 return {
-                    "stdout": raw.decode(errors="replace"),
+                    "stdout": bytes(raw).decode(errors="replace"),
                     "stderr": "",
                     "returncode": int(returncode),
                 }
