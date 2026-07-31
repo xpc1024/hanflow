@@ -88,3 +88,24 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.ruff.lint.per-file-ignores]
 "hanflow/cli/main.py" = ["B008"]  # typer.Option in defaults is the documented pattern
+
+# Coverage baseline (contrib-2026-W31-002). On-demand via `make test-cov`;
+# NOT wired into the default `ci` target and intentionally has no
+# `--cov-fail-under` gate (first baseline — threshold TBD by a later ADR).
+[tool.coverage.run]
+source = ["hanflow"]
+branch = true
+omit = [
+    # Transient baseline-period omission: the langsmith/otel backends cannot
+    # be imported/measured in the default test env (SDK not installed).
+    # This is NOT a long-term policy — see docs/coverage-baseline.md TODO:
+    # once provider tests land (install/mock the SDK), drop this omit or
+    # switch to per-line `# pragma: no cover` + conditional skip.
+    "hanflow/observability/providers/*",
+    "hanflow/cli/main.py",  # typer command dispatch shim, not business logic
+    "*/__init__.py",        # package markers (mostly re-exports, no logic)
+]
+
+[tool.coverage.report]
+show_missing = true   # term-missing report lists uncovered line numbers
+skip_covered = false  # keep fully-covered files for a complete baseline view
