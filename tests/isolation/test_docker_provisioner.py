@@ -188,6 +188,117 @@ async def test_provision_wrong_mode_raises_value_error():
 
 
 # ---------------------------------------------------------------------------
+# storage-opt graceful degradation (mocked; no daemon needed)
+# ---------------------------------------------------------------------------
+
+
+class _FakeContainer:
+    def __init__(self, cid: str = "c-fake") -> None:
+        self.id = cid
+
+    async def start(self) -> None:
+        return None
+
+
+class _FakeDockerClient:
+    """Fake aiodocker client: first create raises a storage-opt DockerError,
+    the second (after the provisioner drops StorageOpt) succeeds."""
+
+    def __init__(self, fail_first: Exception | None) -> None:
+        self._fail_first = fail_first
+        self.calls: list[dict] = []
+
+    @property
+    def containers(self):
+        outer = self
+
+        class _Containers:
+            async def create_or_replace(self, *, name, config):
+                import copy
+
+                outer.calls.append(copy.deepcopy(config))
+                if outer._fail_first is not None:
+                    # First call fails; subsequent calls succeed (retry path).
+                    err = outer._fail_first
+                    outer._fail_first = None
+                    raise err
+                return _FakeContainer()
+
+        return _Containers()
+
+    async def close(self) -> None:
+        return None
+
+
+@pytest.mark.asyncio
+async def test_provision_drops_storage_opt_on_unsupported_daemon(monkeypatch):
+    """Daemon rejects --storage-opt (e.g. overlay2/ext4 CI runners) → provisioner
+    retries once without StorageOpt instead of failing."""
+    from hanflow.isolation import docker_provisioner as dp_mod
+
+    class _DockerError(Exception):
+        pass
+
+    storage_err = _DockerError(
+        "[500] --storage-opt is supported only for overlay over xfs with 'pquota'"
+    )
+    client = _FakeDockerClient(fail_first=storage_err)
+
+    class _FakeDocker:
+        def __call__(self):
+            return client
+
+    fake_aiodocker = type("M", (), {"Docker": _FakeDocker(), "DockerError": _DockerError})
+    monkeypatch.setitem(sys.modules, "aiodocker", fake_aiodocker)
+
+    sb = RunSandbox(
+        run_id="r-degrade",
+        mode=SandboxMode.DOCKER,
+        workspace_root=Path("."),
+        resources=SandboxResources(disk_limit_mb=5120),  # non-zero → StorageOpt set
+    )
+    p = dp_mod.DockerProvisioner(base_image=DOCKER_BASE_IMAGE)
+    provisioned = await p.provision(sb)
+
+    assert provisioned.container_id == "c-fake"
+    # First attempt carried StorageOpt; retry dropped it.
+    assert len(client.calls) == 2
+    assert client.calls[0]["HostConfig"]["StorageOpt"] == {"size": "5120m"}
+    assert client.calls[1]["HostConfig"]["StorageOpt"] is None
+
+
+@pytest.mark.asyncio
+async def test_provision_no_retry_when_storage_opt_absent(monkeypatch):
+    """No StorageOpt in config → a create error is NOT retried (nothing to drop)."""
+    from hanflow.isolation import docker_provisioner as dp_mod
+
+    class _DockerError(Exception):
+        pass
+
+    client = _FakeDockerClient(fail_first=_DockerError("[500] something else"))
+
+    class _FakeDocker:
+        def __call__(self):
+            return client
+
+    fake_aiodocker = type("M", (), {"Docker": _FakeDocker(), "DockerError": _DockerError})
+    monkeypatch.setitem(sys.modules, "aiodocker", fake_aiodocker)
+
+    sb = RunSandbox(
+        run_id="r-noretry",
+        mode=SandboxMode.DOCKER,
+        workspace_root=Path("."),
+        resources=SandboxResources(disk_limit_mb=0),  # zero → no StorageOpt
+    )
+    p = dp_mod.DockerProvisioner(base_image=DOCKER_BASE_IMAGE)
+    from hanflow.core.errors import SandboxProvisionFailedError
+
+    with pytest.raises(SandboxProvisionFailedError):
+        await p.provision(sb)
+    assert len(client.calls) == 1  # no retry
+
+
+# ---------------------------------------------------------------------------
 # Full lifecycle — only when daemon is reachable
 # ---------------------------------------------------------------------------
 

@@ -135,6 +135,17 @@ def _shell_quote(arg: str) -> str:
     return "'" + arg.replace("'", "'\"'\"'") + "'"
 
 
+def _is_storage_opt_unsupported(exc: Exception) -> bool:
+    """Detect docker daemon errors caused by --storage-opt not being supported.
+
+    Some storage drivers (overlay2 over ext4, common on CI runners) reject
+    ``--storage-opt size=`` with a 500 ("supported only for overlay over xfs
+    with 'pquota' mount option"). Used to trigger a storage-opt-free retry.
+    """
+    msg = str(exc).lower()
+    return "storage-opt" in msg or "storage_opt" in msg or "pquota" in msg
+
+
 class DockerProvisioner:
     """Real container provisioner with resource limits + bind mount + destroy."""
 
@@ -151,13 +162,32 @@ class DockerProvisioner:
 
         Docker, DockerError = _import_aiodocker()
         client = Docker()
+        config = self._build_config(run_sandbox)
         try:
-            container = await client.containers.create_or_replace(
-                name=f"hanflow-run-{run_sandbox.run_id}",
-                config=self._build_config(run_sandbox),
-            )
-            await container.start()
-            cid = container.id
+            try:
+                container = await client.containers.create_or_replace(
+                    name=f"hanflow-run-{run_sandbox.run_id}",
+                    config=config,
+                )
+                await container.start()
+                cid = container.id
+            except DockerError as exc:
+                # Graceful degradation: some docker daemons (e.g. GitHub Actions
+                # runners: overlay2 over ext4) reject --storage-opt with a 500
+                # ("supported only for overlay over xfs with 'pquota'"). The disk
+                # quota is a best-effort limit; drop it and retry once so sandbox
+                # provisioning still succeeds without the per-container size cap.
+                has_storage_opt = bool(config.get("HostConfig", {}).get("StorageOpt"))
+                if has_storage_opt and _is_storage_opt_unsupported(exc):
+                    config["HostConfig"]["StorageOpt"] = None
+                    container = await client.containers.create_or_replace(
+                        name=f"hanflow-run-{run_sandbox.run_id}",
+                        config=config,
+                    )
+                    await container.start()
+                    cid = container.id
+                else:
+                    raise
         except DockerError as exc:
             raise SandboxProvisionFailedError(
                 f"docker provision failed: {exc}",
