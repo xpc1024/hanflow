@@ -63,6 +63,7 @@ testpaths = ["tests"]
 addopts = "-ra"
 markers = [
     "integration: requires external services (postgres/redis/s3); skipped by default",
+    "docker: needs a real docker daemon + python:3.11-slim image locally; auto-skipped via @pytest.mark.skipif when the daemon/image is absent",
 ]
 
 [tool.mypy]
