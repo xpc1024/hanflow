@@ -304,6 +304,7 @@ async def test_provision_no_retry_when_storage_opt_absent(monkeypatch):
 
 
 @skip_no_docker
+@pytest.mark.docker
 @pytest.mark.asyncio
 async def test_provision_real_container_lifecycle(tmp_path):
     """Contract: real container provision → exec → destroy."""
@@ -338,6 +339,7 @@ async def test_provision_real_container_lifecycle(tmp_path):
 
 
 @skip_no_docker
+@pytest.mark.docker
 @pytest.mark.asyncio
 async def test_provision_resource_limits_enforced(tmp_path):
     """Resource limits actually applied to the running container."""
@@ -374,6 +376,7 @@ async def test_provision_resource_limits_enforced(tmp_path):
 
 
 @skip_no_docker
+@pytest.mark.docker
 @pytest.mark.asyncio
 async def test_destroy_removes_container(tmp_path):
     """After destroy, container no longer exists."""
@@ -407,6 +410,7 @@ async def test_destroy_removes_container(tmp_path):
 
 
 @skip_no_docker
+@pytest.mark.docker
 @pytest.mark.asyncio
 async def test_exec_timeout_wrapped_as_sandbox_timeout(tmp_path):
     """_DockerExec.run wraps timeout internally as SandboxTimeoutError."""
