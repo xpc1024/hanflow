@@ -19,4 +19,22 @@ jobs:
       # fall back to skip via the _docker_available() image guard.
       - run: docker pull python:3.11-slim
         continue-on-error: true
-      - run: make test
+      # Make image-pull degradation VISIBLE instead of silent. The pull above
+      # is continue-on-error (Docker Hub flakiness shouldn't block unrelated
+      # PRs), but a missing image means the 4 real-container tests silently
+      # SKIP and the live container path goes unverified — a false-green trap.
+      # This gate surfaces that as a GitHub ::warning:: annotation + step log.
+      - name: Verify docker image present
+        run: |
+          if ! docker image inspect python:3.11-slim >/dev/null 2>&1; then
+            echo "::warning::python:3.11-slim missing — 4 real-container tests will SKIP; live container path NOT verified this run"
+          else
+            echo "python:3.11-slim present — real-container tests will run"
+          fi
+      # Split test reporting so the 4 real-daemon tests are individually visible
+      # rather than buried in the aggregate count. '-m "not docker"' covers unit
+      # + non-docker integration tests; '-m docker' isolates the lifecycle ones.
+      - name: test (non-docker)
+        run: uv run pytest -m "not docker" -ra
+      - name: test (docker, real daemon)
+        run: uv run pytest -m docker -v
