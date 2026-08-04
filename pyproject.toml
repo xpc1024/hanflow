@@ -1,6 +1,6 @@
 [project]
 name = "hanflow"
-version = "1.2.1"
+version = "1.2.2"
 description = "Hanflow — Harmony AI Nexus: a high-control agent framework on LangGraph."
 readme = "README.md"
 requires-python = ">=3.11"
