@@ -12,7 +12,7 @@ Static workflows · dynamic agents · hybrid orchestration, all from one unified
 [![Version](https://img.shields.io/badge/version-1.2.3-green.svg)](CHANGELOG.md)
 [![CI](https://github.com/xpc1024/hanflow/actions/workflows/ci.yml/badge.svg)](https://github.com/xpc1024/hanflow/actions)
 
-[Website](https://hanflow.icu) · [Docs](https://hanflow.icu) · [Contributors](https://hanflow.icu/zh/contributors) · [中文](README-ZH.md)
+🌐 **[Website](https://hanflow.icu)**  ·  ⭐ **[GitHub](https://github.com/xpc1024/hanflow)**  ·  ⭐ **[Gitee](https://gitee.com/easy-es/hanflow)**  ·  [Contributors Wall](https://hanflow.icu/zh/contributors)  ·  [中文](README-ZH.md)
 
 </div>
 

@@ -12,7 +12,7 @@
 [![Version](https://img.shields.io/badge/version-1.2.3-green.svg)](CHANGELOG.md)
 [![CI](https://github.com/xpc1024/hanflow/actions/workflows/ci.yml/badge.svg)](https://github.com/xpc1024/hanflow/actions)
 
-[官网](https://hanflow.icu) · [在线文档](https://hanflow.icu) · [贡献墙](https://hanflow.icu/zh/contributors) · [English](README.md)
+🌐 **[官网](https://hanflow.icu)**  ·  ⭐ **[GitHub](https://github.com/xpc1024/hanflow)**  ·  ⭐ **[Gitee](https://gitee.com/easy-es/hanflow)**  ·  [贡献墙](https://hanflow.icu/zh/contributors)  ·  [English](README.md)
 
 </div>
 
