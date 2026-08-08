@@ -14,7 +14,10 @@ from hanflow.sdk import Hanflow
 
 @pytest.fixture
 def app_and_hanflow(tmp_path: Path):
-    cfg = HanflowConfig(workspace_root=str(tmp_path / "ws"))
+    cfg = HanflowConfig(
+        workspace_root=str(tmp_path / "ws"),
+        workflows={"root": str(tmp_path / "workflows")},  # gh#4: test artifacts stay in tmp_path
+    )
     hf = Hanflow(cfg)
     app = build_app(hf)
     return app, hf
